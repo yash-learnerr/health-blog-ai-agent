@@ -62,6 +62,7 @@ VALID_DASHBOARD_SOURCES = {
 
 JSON_RUN_LOG_FILE_NAME = 'agent_run_logs.json'
 JSON_MEMORY_FILE_NAME = 'agent_memory.json'
+JSON_BLOGS_FILE_NAME = 'blogs.json'
 BLOG_MASTER_DB_FILE_PREFIX = 'blog_master/'
 SPACES_BLOG_MASTER_FILE_PREFIX = 'blog-master/'
 
@@ -723,6 +724,270 @@ def _normalize_json_memory_row(row):
     }
 
 
+def _blog_source_order():
+    return ('json', 'database') if operational_storage_backend() == STORAGE_BACKEND_JSON else ('database', 'json')
+
+
+def _blog_json_paths():
+    configured = _first_env_value('AGENT_BLOGS_JSON_PATH', 'BLOG_JSON_PATH', 'BLOG_JSON_PATHS')
+    bases = []
+    if configured:
+        for raw in configured.split(os.pathsep):
+            text = str(raw or '').strip()
+            if not text:
+                continue
+            candidate = Path(text).expanduser()
+            if not candidate.is_absolute():
+                candidate = json_storage_dir() / candidate
+            bases.append(candidate.resolve())
+    else:
+        root = json_storage_dir()
+        bases = [root, root / 'logs']
+
+    paths = []
+    seen = set()
+    for base in bases:
+        candidates = [base]
+        if base.is_dir():
+            candidates = [base / JSON_BLOGS_FILE_NAME, *sorted(base.glob('blog*.json'))]
+        for candidate in candidates:
+            path = Path(candidate).resolve()
+            if not path.is_file():
+                continue
+            if path.name in {JSON_RUN_LOG_FILE_NAME, JSON_MEMORY_FILE_NAME}:
+                continue
+            if path in seen:
+                continue
+            seen.add(path)
+            paths.append(path)
+    return paths
+
+
+def _normalize_json_blog_row(row, default_id=0):
+    if not isinstance(row, dict):
+        return None
+    status = str(row.get('status') or 'active').strip().lower()
+    if status and status not in {'active', 'published', 'live'}:
+        return None
+    summary = str(row.get('summary') or row.get('meta_description') or '').strip()
+    content = str(row.get('content') or row.get('description') or '').strip()
+    image_value = (
+        row.get('image_url')
+        or row.get('image')
+        or row.get('thumbnail')
+        or row.get('cover_image')
+        or row.get('featured_image')
+        or row.get('banner_image')
+        or row.get('hero_image')
+        or row.get('featuredImage')
+        or ''
+    )
+    normalized = {
+        'id': _safe_int(row.get('id'), default_id),
+        'title': str(row.get('title') or row.get('blog_name') or '').strip(),
+        'slug': str(row.get('slug') or '').strip(),
+        'category_name': str(row.get('category_name') or row.get('category') or '').strip(),
+        'summary': summary,
+        'content': content,
+        'image_url': str(image_value or '').strip(),
+        'file_url': blog_master_file_public_url(row.get('file_url') or row.get('file') or ''),
+        'source_url': str(row.get('source_url') or row.get('source') or '').strip(),
+        'created_at': str(row.get('created_at') or row.get('updated_at') or '').strip(),
+    }
+    if not any([normalized['slug'], normalized['title'], normalized['file_url']]):
+        return None
+    return normalized
+
+
+def _read_json_blog_rows():
+    rows = []
+    for path in _blog_json_paths():
+        raw = path.read_text(encoding='utf-8').strip()
+        if not raw:
+            continue
+        payload = json.loads(raw)
+        if isinstance(payload, dict) and isinstance(payload.get('blogs'), list):
+            entries = payload.get('blogs') or []
+        elif isinstance(payload, list):
+            entries = payload
+        elif isinstance(payload, dict):
+            entries = [payload]
+        else:
+            raise RuntimeError(f'unsupported blog JSON payload in {path}')
+        for index, entry in enumerate(entries, start=1):
+            normalized = _normalize_json_blog_row(entry, default_id=index)
+            if normalized is not None:
+                rows.append(normalized)
+    return rows
+
+
+def _sort_blog_rows(rows):
+    return sorted(
+        rows,
+        key=lambda row: (str(row.get('created_at') or ''), _safe_int(row.get('id'))),
+        reverse=True,
+    )
+
+
+def _blog_dedupe_key(row):
+    slug = str(row.get('slug') or '').strip().lower()
+    if slug:
+        return f'slug:{slug}'
+    file_url = str(row.get('file_url') or '').strip().lower()
+    if file_url:
+        return f'file:{file_url}'
+    title = str(row.get('title') or '').strip().lower()
+    if title:
+        return f'title:{title}'
+    return f"id:{_safe_int(row.get('id'))}"
+
+
+def _merge_blog_rows(primary_rows, secondary_rows, limit=None):
+    merged = []
+    seen = set()
+    for group in (_sort_blog_rows(primary_rows), _sort_blog_rows(secondary_rows)):
+        for row in group:
+            key = _blog_dedupe_key(row)
+            if key in seen:
+                continue
+            seen.add(key)
+            merged.append(row)
+    merged = _sort_blog_rows(merged)
+    return merged[:int(limit)] if limit is not None else merged
+
+
+def _fetch_latest_blogs_from_json(limit=8):
+    return _sort_blog_rows(_read_json_blog_rows())[:int(limit)]
+
+
+def _fetch_blog_detail_from_json(slug):
+    wanted = str(slug or '').strip().lower()
+    if not wanted:
+        return None
+    for row in _sort_blog_rows(_read_json_blog_rows()):
+        if str(row.get('slug') or '').strip().lower() == wanted:
+            return row
+    return None
+
+
+def _fetch_latest_blogs_from_database(limit=8):
+    db = publish_db_name()
+    blog_columns = _table_columns(db, 'blog_master')
+    category_columns = _table_columns(db, 'blog_category')
+    if not blog_columns or not category_columns:
+        return []
+
+    title_col = _pick_column(blog_columns, ['blog_name', 'title'])
+    slug_col = _pick_column(blog_columns, ['slug'])
+    summary_col = _pick_column(blog_columns, ['meta_description', 'summary', 'description'])
+    image_col = _pick_column(blog_columns, ['image', 'thumbnail', 'cover_image', 'featured_image', 'banner_image', 'hero_image', 'featuredImage'])
+    file_col = _pick_column(blog_columns, ['file'])
+    category_name_col = _pick_column(category_columns, ['name', 'category_name'])
+    category_fk_col = _pick_column(blog_columns, ['category_id'])
+    category_pk_col = _pick_column(category_columns, ['id'])
+    if not all([title_col, slug_col, category_name_col, category_fk_col, category_pk_col]):
+        return []
+
+    selects = [
+        'bm.id',
+        f"REPLACE(TO_BASE64({_blog_expr('bm', title_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', slug_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bc', category_name_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', summary_col)}), '\n', '')" if summary_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', image_col)}), '\n', '')" if image_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', file_col)}), '\n', '')" if file_col else "''",
+        _blog_datetime_expr('bm', blog_columns),
+    ]
+    active_filter = ""
+    if 'status' in blog_columns:
+        active_filter = "WHERE bm.status = 'active'"
+    sql = f"""
+USE `{db}`;
+SELECT {', '.join(selects)}
+FROM blog_master bm
+LEFT JOIN blog_category bc ON bm.`{category_fk_col}` = bc.`{category_pk_col}`
+{active_filter}
+ORDER BY bm.id DESC
+LIMIT {int(limit)};
+"""
+    rows = _query_rows(sql, 8)
+    return [
+        {
+            'id': int(row[0] or 0),
+            'title': _decode_b64(row[1]),
+            'slug': _decode_b64(row[2]),
+            'category_name': _decode_b64(row[3]),
+            'summary': _decode_b64(row[4]),
+            'image_url': _decode_b64(row[5]),
+            'file_url': blog_master_file_public_url(_decode_b64(row[6])),
+            'created_at': row[7],
+        }
+        for row in rows
+    ]
+
+
+def _fetch_blog_detail_from_database(slug):
+    db = publish_db_name()
+    blog_columns = _table_columns(db, 'blog_master')
+    category_columns = _table_columns(db, 'blog_category')
+    if not blog_columns or not category_columns:
+        return None
+
+    title_col = _pick_column(blog_columns, ['blog_name', 'title'])
+    slug_col = _pick_column(blog_columns, ['slug'])
+    summary_col = _pick_column(blog_columns, ['meta_description', 'summary', 'description'])
+    content_col = _pick_column(blog_columns, ['description', 'content', 'blog_description'])
+    image_col = _pick_column(blog_columns, ['image', 'thumbnail', 'cover_image', 'featured_image', 'banner_image', 'hero_image', 'featuredImage'])
+    file_col = _pick_column(blog_columns, ['file'])
+    source_col = _pick_column(blog_columns, ['source_url', 'source'])
+    category_name_col = _pick_column(category_columns, ['name', 'category_name'])
+    category_fk_col = _pick_column(blog_columns, ['category_id'])
+    category_pk_col = _pick_column(category_columns, ['id'])
+    if not all([title_col, slug_col, category_name_col, category_fk_col, category_pk_col]):
+        return None
+
+    selects = [
+        'bm.id',
+        f"REPLACE(TO_BASE64({_blog_expr('bm', title_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', slug_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bc', category_name_col)}), '\n', '')",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', summary_col)}), '\n', '')" if summary_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', content_col)}), '\n', '')" if content_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', image_col)}), '\n', '')" if image_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', file_col)}), '\n', '')" if file_col else "''",
+        f"REPLACE(TO_BASE64({_blog_expr('bm', source_col)}), '\n', '')" if source_col else "''",
+        _blog_datetime_expr('bm', blog_columns),
+    ]
+    filters = [text_equals_expr(f"bm.`{slug_col}`", slug)]
+    if 'status' in blog_columns:
+        filters.append("bm.status = 'active'")
+    sql = f"""
+USE `{db}`;
+SELECT {', '.join(selects)}
+FROM blog_master bm
+LEFT JOIN blog_category bc ON bm.`{category_fk_col}` = bc.`{category_pk_col}`
+WHERE {' AND '.join(filters)}
+ORDER BY bm.id DESC
+LIMIT 1;
+"""
+    rows = _query_rows(sql, 10)
+    if not rows:
+        return None
+    row = rows[0]
+    return {
+        'id': int(row[0] or 0),
+        'title': _decode_b64(row[1]),
+        'slug': _decode_b64(row[2]),
+        'category_name': _decode_b64(row[3]),
+        'summary': _decode_b64(row[4]),
+        'content': _decode_b64(row[5]),
+        'image_url': _decode_b64(row[6]),
+        'file_url': blog_master_file_public_url(_decode_b64(row[7])),
+        'source_url': _decode_b64(row[8]),
+        'created_at': row[9],
+    }
+
+
 def _store_memory_fact_in_database(topic_slug, category_name, memory_key, verified_fact, source_url=None, confidence=None, status='active'):
     ensure_operational_tables()
     sql = f"""
@@ -828,121 +1093,49 @@ def _blog_datetime_expr(alias, columns):
 
 
 def fetch_latest_blogs(limit=8):
-    db = publish_db_name()
-    blog_columns = _table_columns(db, 'blog_master')
-    category_columns = _table_columns(db, 'blog_category')
-    if not blog_columns or not category_columns:
-        return []
-
-    title_col = _pick_column(blog_columns, ['blog_name', 'title'])
-    slug_col = _pick_column(blog_columns, ['slug'])
-    summary_col = _pick_column(blog_columns, ['meta_description', 'summary', 'description'])
-    image_col = _pick_column(blog_columns, ['image', 'thumbnail', 'cover_image', 'featured_image', 'banner_image', 'hero_image', 'featuredImage'])
-    file_col = _pick_column(blog_columns, ['file'])
-    category_name_col = _pick_column(category_columns, ['name', 'category_name'])
-    category_fk_col = _pick_column(blog_columns, ['category_id'])
-    category_pk_col = _pick_column(category_columns, ['id'])
-    if not all([title_col, slug_col, category_name_col, category_fk_col, category_pk_col]):
-        return []
-
-    selects = [
-        'bm.id',
-        f"REPLACE(TO_BASE64({_blog_expr('bm', title_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', slug_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bc', category_name_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', summary_col)}), '\n', '')" if summary_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', image_col)}), '\n', '')" if image_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', file_col)}), '\n', '')" if file_col else "''",
-        _blog_datetime_expr('bm', blog_columns),
-    ]
-    active_filter = ""
-    if 'status' in blog_columns:
-        active_filter = "WHERE bm.status = 'active'"
-    sql = f"""
-USE `{db}`;
-SELECT {', '.join(selects)}
-FROM blog_master bm
-LEFT JOIN blog_category bc ON bm.`{category_fk_col}` = bc.`{category_pk_col}`
-{active_filter}
-ORDER BY bm.id DESC
-LIMIT {int(limit)};
-"""
-    rows = _query_rows(sql, 8)
-    return [
-        {
-            'id': int(row[0] or 0),
-            'title': _decode_b64(row[1]),
-            'slug': _decode_b64(row[2]),
-            'category_name': _decode_b64(row[3]),
-            'summary': _decode_b64(row[4]),
-            'image_url': _decode_b64(row[5]),
-            'file_url': blog_master_file_public_url(_decode_b64(row[6])),
-            'created_at': row[7],
-        }
-        for row in rows
-    ]
+    limit = int(limit)
+    source_order = _blog_source_order()
+    rows_by_source = {'database': [], 'json': []}
+    errors = []
+    loaders = {
+        'database': lambda: _fetch_latest_blogs_from_database(limit=limit),
+        'json': lambda: _fetch_latest_blogs_from_json(limit=limit),
+    }
+    for source in source_order:
+        try:
+            rows_by_source[source] = loaders[source]()
+        except Exception as exc:
+            errors.append(f'{source}: {exc}')
+    merged = _merge_blog_rows(
+        rows_by_source[source_order[0]],
+        rows_by_source[source_order[1]],
+        limit=limit,
+    )
+    if merged or not errors:
+        return merged
+    raise RuntimeError('failed to load blogs: ' + '; '.join(errors))
 
 
 def fetch_blog_detail(slug):
-    db = publish_db_name()
-    blog_columns = _table_columns(db, 'blog_master')
-    category_columns = _table_columns(db, 'blog_category')
-    if not blog_columns or not category_columns:
+    wanted = str(slug or '').strip()
+    if not wanted:
         return None
-
-    title_col = _pick_column(blog_columns, ['blog_name', 'title'])
-    slug_col = _pick_column(blog_columns, ['slug'])
-    summary_col = _pick_column(blog_columns, ['meta_description', 'summary', 'description'])
-    content_col = _pick_column(blog_columns, ['description', 'content', 'blog_description'])
-    image_col = _pick_column(blog_columns, ['image', 'thumbnail', 'cover_image', 'featured_image', 'banner_image', 'hero_image', 'featuredImage'])
-    file_col = _pick_column(blog_columns, ['file'])
-    source_col = _pick_column(blog_columns, ['source_url', 'source'])
-    category_name_col = _pick_column(category_columns, ['name', 'category_name'])
-    category_fk_col = _pick_column(blog_columns, ['category_id'])
-    category_pk_col = _pick_column(category_columns, ['id'])
-    if not all([title_col, slug_col, category_name_col, category_fk_col, category_pk_col]):
-        return None
-
-    selects = [
-        'bm.id',
-        f"REPLACE(TO_BASE64({_blog_expr('bm', title_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', slug_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bc', category_name_col)}), '\n', '')",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', summary_col)}), '\n', '')" if summary_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', content_col)}), '\n', '')" if content_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', image_col)}), '\n', '')" if image_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', file_col)}), '\n', '')" if file_col else "''",
-        f"REPLACE(TO_BASE64({_blog_expr('bm', source_col)}), '\n', '')" if source_col else "''",
-        _blog_datetime_expr('bm', blog_columns),
-    ]
-    filters = [text_equals_expr(f"bm.`{slug_col}`", slug)]
-    if 'status' in blog_columns:
-        filters.append("bm.status = 'active'")
-    sql = f"""
-USE `{db}`;
-SELECT {', '.join(selects)}
-FROM blog_master bm
-LEFT JOIN blog_category bc ON bm.`{category_fk_col}` = bc.`{category_pk_col}`
-WHERE {' AND '.join(filters)}
-ORDER BY bm.id DESC
-LIMIT 1;
-"""
-    rows = _query_rows(sql, 10)
-    if not rows:
-        return None
-    row = rows[0]
-    return {
-        'id': int(row[0] or 0),
-        'title': _decode_b64(row[1]),
-        'slug': _decode_b64(row[2]),
-        'category_name': _decode_b64(row[3]),
-        'summary': _decode_b64(row[4]),
-        'content': _decode_b64(row[5]),
-        'image_url': _decode_b64(row[6]),
-        'file_url': blog_master_file_public_url(_decode_b64(row[7])),
-        'source_url': _decode_b64(row[8]),
-        'created_at': row[9],
+    errors = []
+    loaders = {
+        'database': lambda: _fetch_blog_detail_from_database(wanted),
+        'json': lambda: _fetch_blog_detail_from_json(wanted),
     }
+    for source in _blog_source_order():
+        try:
+            row = loaders[source]()
+        except Exception as exc:
+            errors.append(f'{source}: {exc}')
+            continue
+        if row is not None:
+            return row
+    if errors:
+        raise RuntimeError('failed to load blog detail: ' + '; '.join(errors))
+    return None
 
 
 def fetch_memory_context(limit=50):

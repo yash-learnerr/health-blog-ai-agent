@@ -134,6 +134,102 @@ class AgentDbTests(unittest.TestCase):
 
         self.assertEqual(rows[0]['file_url'], 'https://example-bucket.nyc3.digitaloceanspaces.com/blog-master/example.png')
 
+    def test_fetch_latest_blogs_reads_json_blog_file_when_storage_backend_is_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mod.os.environ['AGENT_STORAGE_BACKEND'] = 'json'
+            mod.os.environ['AGENT_JSON_STORAGE_DIR'] = temp_dir
+            Path(temp_dir, 'blogs.json').write_text(json.dumps({
+                'blogs': [{
+                    'id': 3,
+                    'title': 'JSON Blog',
+                    'slug': 'json-blog',
+                    'category_name': 'Research',
+                    'summary': 'Loaded from JSON.',
+                    'content': 'Body from JSON.',
+                    'created_at': '2026-03-08 14:00:00',
+                }]
+            }, ensure_ascii=False), encoding='utf-8')
+
+            with mock.patch.object(mod, '_fetch_latest_blogs_from_database', side_effect=RuntimeError('db unavailable')):
+                rows = mod.fetch_latest_blogs(limit=5)
+
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]['slug'], 'json-blog')
+        self.assertEqual(rows[0]['title'], 'JSON Blog')
+
+    def test_fetch_latest_blogs_merges_database_and_json_without_duplicates(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mod.os.environ['AGENT_JSON_STORAGE_DIR'] = temp_dir
+            Path(temp_dir, 'blogs.json').write_text(json.dumps([
+                {
+                    'id': 21,
+                    'title': 'JSON duplicate',
+                    'slug': 'shared-slug',
+                    'category_name': 'Research',
+                    'summary': 'Duplicate JSON row.',
+                    'created_at': '2026-03-08 10:00:00',
+                },
+                {
+                    'id': 22,
+                    'title': 'JSON only',
+                    'slug': 'json-only',
+                    'category_name': 'Therapeutics',
+                    'summary': 'JSON unique row.',
+                    'created_at': '2026-03-08 11:00:00',
+                },
+            ], ensure_ascii=False), encoding='utf-8')
+
+            db_rows = [
+                {
+                    'id': 30,
+                    'title': 'Database duplicate',
+                    'slug': 'shared-slug',
+                    'category_name': 'Research',
+                    'summary': 'Database version wins.',
+                    'image_url': '',
+                    'file_url': '',
+                    'created_at': '2026-03-08 12:00:00',
+                },
+                {
+                    'id': 31,
+                    'title': 'Database only',
+                    'slug': 'db-only',
+                    'category_name': 'Policy',
+                    'summary': 'Database unique row.',
+                    'image_url': '',
+                    'file_url': '',
+                    'created_at': '2026-03-08 09:00:00',
+                },
+            ]
+
+            with mock.patch.object(mod, '_fetch_latest_blogs_from_database', return_value=db_rows):
+                rows = mod.fetch_latest_blogs(limit=10)
+
+        self.assertEqual([row['slug'] for row in rows], ['shared-slug', 'json-only', 'db-only'])
+        self.assertEqual(sum(1 for row in rows if row['slug'] == 'shared-slug'), 1)
+        self.assertEqual(rows[0]['title'], 'Database duplicate')
+
+    def test_fetch_blog_detail_falls_back_to_json_when_database_has_no_match(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mod.os.environ['AGENT_JSON_STORAGE_DIR'] = temp_dir
+            Path(temp_dir, 'blog_detail.json').write_text(json.dumps({
+                'title': 'JSON Detail',
+                'slug': 'json-detail',
+                'category_name': 'Research',
+                'summary': 'Detail summary.',
+                'content': 'Full JSON content.',
+                'source_url': 'https://example.com/source',
+                'created_at': '2026-03-08 15:00:00',
+            }, ensure_ascii=False), encoding='utf-8')
+
+            with mock.patch.object(mod, '_fetch_blog_detail_from_database', return_value=None):
+                row = mod.fetch_blog_detail('json-detail')
+
+        self.assertIsNotNone(row)
+        self.assertEqual(row['title'], 'JSON Detail')
+        self.assertEqual(row['content'], 'Full JSON content.')
+        self.assertEqual(row['source_url'], 'https://example.com/source')
+
     def test_sh_timeout_raises_runtime_error(self):
         with self.assertRaises(RuntimeError):
             mod.sh(['python3', '-c', 'import time; time.sleep(1)'], timeout_seconds=0)
