@@ -1,0 +1,1665 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health AI Agent Workflow Presentation</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("health-agent-theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : prefersDark
+                ? "dark"
+                : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+
+  <body data-page="blog-workflow">
+    <svg class="workflow-sprite" aria-hidden="true" focusable="false">
+      <symbol id="wf-icon-user" viewBox="0 0 24 24">
+        <circle cx="12" cy="7" r="4"></circle>
+        <path d="M4 21v-1a8 8 0 0 1 16 0v1"></path>
+      </symbol>
+      <symbol id="wf-icon-bot" viewBox="0 0 24 24">
+        <rect x="5" y="7" width="14" height="11" rx="2"></rect>
+        <path d="M12 3v4"></path>
+        <path d="M9 12h.01"></path>
+        <path d="M15 12h.01"></path>
+        <path d="M9 18v2"></path>
+        <path d="M15 18v2"></path>
+      </symbol>
+      <symbol id="wf-icon-presentation" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="12" rx="2"></rect>
+        <path d="M12 16v4"></path>
+        <path d="M8 20h8"></path>
+        <path d="m7.5 12 3-3 2.5 2 3.5-4"></path>
+      </symbol>
+      <symbol id="wf-icon-clock" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8"></circle>
+        <path d="M12 8v4l3 2"></path>
+      </symbol>
+      <symbol id="wf-icon-alert" viewBox="0 0 24 24">
+        <path d="M12 4 21 20H3L12 4Z"></path>
+        <path d="M12 10v4"></path>
+        <path d="M12 17h.01"></path>
+      </symbol>
+      <symbol id="wf-icon-loop" viewBox="0 0 24 24">
+        <path d="M7 7h9a4 4 0 1 1 0 8H8"></path>
+        <path d="m7 4-3 3 3 3"></path>
+        <path d="m17 14 3 3-3 3"></path>
+      </symbol>
+      <symbol id="wf-icon-search" viewBox="0 0 24 24">
+        <circle cx="11" cy="11" r="6"></circle>
+        <path d="m20 20-4.2-4.2"></path>
+      </symbol>
+      <symbol id="wf-icon-pen" viewBox="0 0 24 24">
+        <path d="m4 20 4.5-1 9-9a2.2 2.2 0 0 0-3.1-3.1l-9 9L4 20Z"></path>
+        <path d="m13.5 6.5 4 4"></path>
+      </symbol>
+      <symbol id="wf-icon-shield" viewBox="0 0 24 24">
+        <path
+          d="M12 3 5 6v5c0 4.5 2.9 8.4 7 9.8 4.1-1.4 7-5.3 7-9.8V6l-7-3Z"
+        ></path>
+        <path d="m9.5 12 2 2 4-4"></path>
+      </symbol>
+      <symbol id="wf-icon-send" viewBox="0 0 24 24">
+        <path d="M3 11.5 21 4l-7.5 17-2.5-7-8-2.5Z"></path>
+        <path d="M10.5 14 21 4"></path>
+      </symbol>
+      <symbol id="wf-icon-globe" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8"></circle>
+        <path d="M4.5 9h15"></path>
+        <path d="M4.5 15h15"></path>
+        <path d="M12 4a12 12 0 0 1 0 16"></path>
+        <path d="M12 4a12 12 0 0 0 0 16"></path>
+      </symbol>
+      <symbol id="wf-icon-target" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8"></circle>
+        <circle cx="12" cy="12" r="3.5"></circle>
+        <path d="m15 9 5-5"></path>
+        <path d="M16 4h4v4"></path>
+      </symbol>
+      <symbol id="wf-icon-spark" viewBox="0 0 24 24">
+        <path
+          d="m12 3 1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8L12 3Z"
+        ></path>
+        <path
+          d="m18.5 15 1 2.2 2.2 1-2.2 1-1 2.3-1-2.3-2.3-1 2.3-1 1-2.2Z"
+        ></path>
+      </symbol>
+      <symbol id="wf-icon-database" viewBox="0 0 24 24">
+        <ellipse cx="12" cy="6.5" rx="6.5" ry="2.5"></ellipse>
+        <path d="M5.5 6.5v4c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-4"></path>
+        <path d="M5.5 10.5v4c0 1.4 2.9 2.5 6.5 2.5s6.5-1.1 6.5-2.5v-4"></path>
+      </symbol>
+      <symbol id="wf-icon-rocket" viewBox="0 0 24 24">
+        <path
+          d="M14 4c3 0 5 2.3 6 6-2 .2-3.6 1-5 2.4L11.6 9C13 7.6 13.8 6 14 4Z"
+        ></path>
+        <path d="m11.6 9-3.1 3.1"></path>
+        <path d="m15 12 3.1 3.1"></path>
+        <path d="M8.5 12.5 5 16l3-1 1 4 3.5-3.5"></path>
+      </symbol>
+      <symbol id="wf-icon-check" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="8"></circle>
+        <path d="m8.5 12.5 2.2 2.2 4.8-4.8"></path>
+      </symbol>
+      <symbol id="wf-icon-chart" viewBox="0 0 24 24">
+        <path d="M5 19V9"></path>
+        <path d="M12 19V5"></path>
+        <path d="M19 19v-7"></path>
+        <path d="M3 19h18"></path>
+      </symbol>
+    </svg>
+    <div class="shell">
+      <div class="hero-stack">
+        <header class="hero">
+          <div class="app-header-brand">
+            <span class="app-header-kicker">Health AI Agent</span>
+            <strong>Workflow presentation</strong>
+          </div>
+          <nav class="hero-nav">
+            <div class="hero-nav-links">
+              <a class="nav-link" href="/">Dashboard</a>
+              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+              <a class="nav-link active" href="/frontend/blog-workflow.html"
+                >Workflow</a
+              >
+              <a class="nav-link" href="/frontend/agent-adoption-guide.html"
+                >Adoption Guide</a
+              >
+              <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+            </div>
+            <button
+              class="theme-toggle"
+              id="theme-toggle"
+              type="button"
+              aria-pressed="false"
+              aria-label="Switch to dark mode"
+            >
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-moon"
+                  >☾</span
+                >
+              </span>
+            </button>
+          </nav>
+        </header>
+        <div class="hero-divider" aria-hidden="true"></div>
+      </div>
+
+      <main class="page-content">
+        <section class="page-intro workflow-hero">
+          <div>
+            <p class="eyebrow">Workflow presentation</p>
+            <h1>Global health blog creation: before AI vs AI automation</h1>
+            <p class="hero-copy">
+              A presentation-ready frontend view based on the two workflow
+              documents, showing the manual publishing journey, the AI-powered
+              flow, and the operational difference between both approaches.
+            </p>
+            <div class="workflow-badge-row">
+              <span class="workflow-pill is-manual"
+                ><svg class="workflow-svg-icon" aria-hidden="true">
+                  <use href="#wf-icon-user"></use></svg
+                >Manual publishing</span
+              >
+              <span class="workflow-pill is-ai"
+                ><svg class="workflow-svg-icon" aria-hidden="true">
+                  <use href="#wf-icon-bot"></use></svg
+                >AI automation</span
+              >
+              <span class="workflow-pill"
+                ><svg class="workflow-svg-icon" aria-hidden="true">
+                  <use href="#wf-icon-presentation"></use></svg
+                >Quick presentation view</span
+              >
+            </div>
+          </div>
+          <aside class="workflow-hero-highlight">
+            <span class="workflow-highlight-label">Presentation focus</span>
+            <strong
+              >From slow manual monitoring to fast AI-assisted
+              publishing</strong
+            >
+            <ul class="workflow-hero-points">
+              <li>
+                <span aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-check"></use></svg></span
+                >Quick comparison first
+              </li>
+              <li>
+                <span aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-check"></use></svg></span
+                >Visual process diagram
+              </li>
+              <li>
+                <span aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-check"></use></svg></span
+                >Easy-to-scan icons and cards
+              </li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="workflow-summary-strip">
+          <article class="workflow-summary-card is-manual">
+            <div class="workflow-summary-top">
+              <span class="workflow-card-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-clock"></use></svg
+              ></span>
+              <span class="label">Manual effort</span>
+            </div>
+            <strong>90 min – 3 hrs</strong>
+            <p>
+              Typical time required to research, write, review, and publish one
+              article.
+            </p>
+          </article>
+          <article class="workflow-summary-card is-ai">
+            <div class="workflow-summary-top">
+              <span class="workflow-card-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-spark"></use></svg
+              ></span>
+              <span class="label">AI cycle time</span>
+            </div>
+            <strong>5–10 minutes per article</strong>
+            <p>
+              Automated collection, analysis, article generation, and
+              publish-ready output.
+            </p>
+          </article>
+          <article class="workflow-summary-card is-manual">
+            <div class="workflow-summary-top">
+              <span class="workflow-card-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-alert"></use></svg
+              ></span>
+              <span class="label">Manual pain points</span>
+            </div>
+            <strong>6 core issues</strong>
+            <p>
+              Time pressure, repetitive work, missed updates, scalability
+              limits, delays, and dependency on people.
+            </p>
+          </article>
+          <article class="workflow-summary-card is-ai">
+            <div class="workflow-summary-top">
+              <span class="workflow-card-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-loop"></use></svg
+              ></span>
+              <span class="label">Automated flow</span>
+            </div>
+            <strong>8 AI stages</strong>
+            <p>
+              From scheduler trigger through filtering, duplicate detection,
+              content generation, and publishing.
+            </p>
+          </article>
+        </section>
+
+        <section
+          class="workflow-legend-strip"
+          aria-label="Manual versus AI legend"
+        >
+          <div class="workflow-legend-copy">
+            <p class="eyebrow">Color legend</p>
+            <h2>How to read this presentation</h2>
+            <p class="hero-copy">
+              Amber highlights represent the manual workflow, teal highlights
+              represent AI automation, and neutral cards represent quick
+              comparison or shared explanation.
+            </p>
+          </div>
+          <div class="workflow-legend-items">
+            <article class="workflow-legend-item is-manual">
+              <span class="workflow-legend-swatch"></span>
+              <span class="workflow-legend-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-user"></use></svg
+              ></span>
+              <div>
+                <strong>Manual workflow</strong>
+                <p>Human effort, handoffs, and slower publishing decisions.</p>
+              </div>
+            </article>
+            <article class="workflow-legend-item is-ai">
+              <span class="workflow-legend-swatch"></span>
+              <span class="workflow-legend-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-bot"></use></svg
+              ></span>
+              <div>
+                <strong>AI workflow</strong>
+                <p>
+                  Automated monitoring, filtering, drafting, and publishing.
+                </p>
+              </div>
+            </article>
+            <article class="workflow-legend-item is-neutral">
+              <span class="workflow-legend-swatch"></span>
+              <span class="workflow-legend-icon" aria-hidden="true"
+                ><svg class="workflow-svg-icon">
+                  <use href="#wf-icon-presentation"></use></svg
+              ></span>
+              <div>
+                <strong>Presentation / overview</strong>
+                <p>
+                  Comparison slides, summary ideas, and executive takeaways.
+                </p>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="workflow-layout workflow-layout--single">
+          <div class="workflow-content">
+            <article class="panel workflow-section" id="workflow-comparison">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Quick idea</p>
+                  <h2>Difference table: manual vs AI workflow</h2>
+                </div>
+              </div>
+              <div class="table-wrap workflow-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Process stage</th>
+                      <th>Manual workflow</th>
+                      <th>AI agent workflow</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Monitoring news</td>
+                      <td>Manual website checks</td>
+                      <td>Automated data collection</td>
+                    </tr>
+                    <tr>
+                      <td>Identifying updates</td>
+                      <td>Manual review</td>
+                      <td>AI topic filtering</td>
+                    </tr>
+                    <tr>
+                      <td>Research</td>
+                      <td>Manual information gathering</td>
+                      <td>AI content analysis</td>
+                    </tr>
+                    <tr>
+                      <td>Writing blog</td>
+                      <td>Manual writing</td>
+                      <td>AI article generation</td>
+                    </tr>
+                    <tr>
+                      <td>Publishing</td>
+                      <td>Manual CMS entry</td>
+                      <td>Automatic publishing or editor review</td>
+                    </tr>
+                    <tr>
+                      <td>Total time</td>
+                      <td>90 min – 3 hrs/article</td>
+                      <td>5–10 minutes per article</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article
+              class="panel workflow-section workflow-diagram-panel"
+              id="process-diagram"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Visual explanation</p>
+                  <h2>Process diagram</h2>
+                </div>
+                <span class="chip">Easy overview</span>
+              </div>
+
+              <div class="workflow-diagram-grid">
+                <article class="workflow-lane workflow-lane-manual">
+                  <div class="workflow-lane-head">
+                    <span class="workflow-lane-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-user"></use></svg
+                    ></span>
+                    <div>
+                      <p class="eyebrow">Before AI</p>
+                      <h3>Manual publishing lane</h3>
+                      <p>
+                        People-driven work with repeated handoffs and slower
+                        turnaround.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="workflow-flow">
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-search"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Monitor sources</strong>
+                        <span
+                          >Admin checks trusted sites and news portals
+                          manually.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-database"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Collect and organize facts</strong>
+                        <span
+                          >Research, compare articles, and save references by
+                          hand.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-pen"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Write and review</strong>
+                        <span
+                          >Create the article draft and validate content
+                          manually.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-send"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Publish in CMS</strong>
+                        <span
+                          >Enter content and publish after final editorial
+                          approval.</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="workflow-lane workflow-lane-ai">
+                  <div class="workflow-lane-head">
+                    <span class="workflow-lane-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-bot"></use></svg
+                    ></span>
+                    <div>
+                      <p class="eyebrow">Using AI</p>
+                      <h3>AI automation lane</h3>
+                      <p>
+                        System-driven monitoring, filtering, writing, and
+                        publish-ready output.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div class="workflow-flow">
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-clock"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Scheduler starts the run</strong>
+                        <span
+                          >Agent executes automatically on the configured
+                          interval.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-globe"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Collect trusted updates</strong>
+                        <span
+                          >Pull data from WHO, CDC, NIH, journals, feeds, and
+                          APIs.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-spark"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Filter, check duplicates, analyze</strong>
+                        <span
+                          >AI decides what matters and extracts the core
+                          insight.</span
+                        >
+                      </div>
+                    </div>
+                    <div class="workflow-flow-step">
+                      <span class="workflow-flow-icon" aria-hidden="true"
+                        ><svg class="workflow-svg-icon">
+                          <use href="#wf-icon-rocket"></use></svg
+                      ></span>
+                      <div>
+                        <strong>Generate and publish</strong>
+                        <span
+                          >Create a structured article and save or publish it
+                          quickly.</span
+                        >
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </article>
+
+            <article
+              class="panel workflow-section workflow-agent-map"
+              id="agent-diagram"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">AI agent anatomy</p>
+                  <h2>How the AI agent works</h2>
+                </div>
+                <span class="chip">Understand one run</span>
+              </div>
+              <p>
+                One run starts from the scheduler, loads instructions and
+                memory, studies trusted health sources, decides what matters,
+                creates a publish-ready article, and then stores what it learned
+                for the next run.
+              </p>
+
+              <div class="workflow-agent-core-card">
+                <span class="workflow-lane-icon" aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-bot"></use></svg
+                ></span>
+                <div>
+                  <p class="eyebrow">Autonomous core</p>
+                  <h3>Global Health Intelligence Agent</h3>
+                  <p>
+                    The agent reads <code>AGENT.md</code>, follows
+                    <code>MAIN_WORKFLOW.md</code>, and autonomously chooses the
+                    next step until the run is complete.
+                  </p>
+                </div>
+              </div>
+
+              <p class="workflow-note workflow-agent-instruction">
+                Read the runtime path from left to right, then continue on the
+                second row.
+              </p>
+
+              <div
+                class="workflow-agent-path"
+                aria-label="AI agent runtime path"
+              >
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-clock"></use></svg
+                  ></span>
+                  <strong>1. Trigger the run</strong>
+                  <p>Scheduler or operator starts one workflow cycle.</p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-database"></use></svg
+                  ></span>
+                  <strong>2. Load memory + context</strong>
+                  <p>Retrieve previous facts and recent publishing history.</p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-globe"></use></svg
+                  ></span>
+                  <strong>3. Gather trusted sources</strong>
+                  <p>
+                    Collect updates from WHO, CDC, NIH, journals, feeds, and
+                    APIs.
+                  </p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-target"></use></svg
+                  ></span>
+                  <strong>4. Select what matters</strong>
+                  <p>
+                    Choose relevant topics and skip duplicates or weak signals.
+                  </p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-pen"></use></svg
+                  ></span>
+                  <strong>5. Research + write</strong>
+                  <p>
+                    Build an evidence-grounded article draft with structured
+                    output.
+                  </p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-shield"></use></svg
+                  ></span>
+                  <strong>6. Test + verify</strong>
+                  <p>
+                    Run deterministic checks and final evidence verification.
+                  </p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-rocket"></use></svg
+                  ></span>
+                  <strong>7. Publish output</strong>
+                  <p>Save approved content to the publishing database.</p>
+                </article>
+                <article class="workflow-agent-node">
+                  <span class="workflow-flow-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-loop"></use></svg
+                  ></span>
+                  <strong>8. Learn + log</strong>
+                  <p>
+                    Store reusable memory and append run events to the
+                    dashboard/logs.
+                  </p>
+                </article>
+              </div>
+
+              <div class="workflow-agent-support-grid">
+                <article class="workflow-agent-support-card">
+                  <span class="workflow-item-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-shield"></use></svg
+                  ></span>
+                  <div>
+                    <strong>Always-on guardrails</strong>
+                    <p>
+                      Evidence rubric, duplicate detection, validation, and safe
+                      publishing checks.
+                    </p>
+                  </div>
+                </article>
+                <article class="workflow-agent-support-card">
+                  <span class="workflow-item-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-chart"></use></svg
+                  ></span>
+                  <div>
+                    <strong>Visible operations</strong>
+                    <p>
+                      Every run can be reviewed through dashboard activity, run
+                      logs, and memory history.
+                    </p>
+                  </div>
+                </article>
+                <article class="workflow-agent-support-card">
+                  <span class="workflow-item-icon" aria-hidden="true"
+                    ><svg class="workflow-svg-icon">
+                      <use href="#wf-icon-spark"></use></svg
+                  ></span>
+                  <div>
+                    <strong>What gets better over time</strong>
+                    <p>
+                      The system reuses memory, reduces redundant work, and
+                      improves future topic context.
+                    </p>
+                  </div>
+                </article>
+              </div>
+            </article>
+
+            <article
+              class="panel workflow-section workflow-pipeline-panel"
+              id="agent-pipeline"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Animated pipeline</p>
+                  <h2>Agent pipeline from signal to published output</h2>
+                </div>
+                <span class="chip">Motion view</span>
+              </div>
+              <p>
+                This pipeline shows the shortest explanation of the runtime:
+                signals come in, the agent evaluates them, quality checks run,
+                approved content is published, and the run writes memory/logs.
+              </p>
+
+              <div class="workflow-pipeline-wrap">
+                <svg
+                  class="workflow-pipeline-svg"
+                  viewBox="0 0 1120 250"
+                  role="img"
+                  aria-label="Animated AI agent pipeline"
+                >
+                  <defs>
+                    <linearGradient
+                      id="workflowPipelineGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="0%"
+                    >
+                      <stop offset="0%" stop-color="#0f766e"></stop>
+                      <stop offset="50%" stop-color="#14b8a6"></stop>
+                      <stop offset="100%" stop-color="#22c55e"></stop>
+                    </linearGradient>
+                    <filter id="workflowPipelineGlow">
+                      <feGaussianBlur
+                        stdDeviation="4"
+                        result="blur"
+                      ></feGaussianBlur>
+                      <feMerge>
+                        <feMergeNode in="blur"></feMergeNode>
+                        <feMergeNode in="SourceGraphic"></feMergeNode>
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <path
+                    class="workflow-pipeline-track"
+                    id="workflowPipelinePath"
+                    d="M120 125 H1000"
+                  ></path>
+                  <path
+                    class="workflow-pipeline-flow"
+                    d="M120 125 H1000"
+                    filter="url(#workflowPipelineGlow)"
+                  ></path>
+
+                  <g
+                    class="workflow-pipeline-stage is-input"
+                    transform="translate(40 60)"
+                  >
+                    <rect x="0" y="0" width="160" height="130" rx="28"></rect>
+                    <text x="80" y="46">Trusted</text>
+                    <text x="80" y="74">sources</text>
+                    <text x="80" y="104">WHO · CDC · NIH</text>
+                  </g>
+                  <g
+                    class="workflow-pipeline-stage is-agent"
+                    transform="translate(240 60)"
+                  >
+                    <rect x="0" y="0" width="180" height="130" rx="28"></rect>
+                    <text x="90" y="46">Fetch +</text>
+                    <text x="90" y="74">deduplicate</text>
+                    <text x="90" y="104">current signals</text>
+                  </g>
+                  <g
+                    class="workflow-pipeline-stage is-agent"
+                    transform="translate(460 60)"
+                  >
+                    <rect x="0" y="0" width="180" height="130" rx="28"></rect>
+                    <text x="90" y="46">Research +</text>
+                    <text x="90" y="74">draft</text>
+                    <text x="90" y="104">build article</text>
+                  </g>
+                  <g
+                    class="workflow-pipeline-stage is-guard"
+                    transform="translate(680 60)"
+                  >
+                    <rect x="0" y="0" width="180" height="130" rx="28"></rect>
+                    <text x="90" y="46">Test +</text>
+                    <text x="90" y="74">verify</text>
+                    <text x="90" y="104">safe to publish</text>
+                  </g>
+                  <g
+                    class="workflow-pipeline-stage is-output"
+                    transform="translate(900 60)"
+                  >
+                    <rect x="0" y="0" width="180" height="130" rx="28"></rect>
+                    <text x="90" y="46">Publish +</text>
+                    <text x="90" y="74">store memory</text>
+                    <text x="90" y="104">dashboard visible</text>
+                  </g>
+
+                  <circle
+                    class="workflow-pipeline-pulse"
+                    cx="120"
+                    cy="125"
+                    r="8"
+                  >
+                    <animateMotion
+                      dur="4s"
+                      repeatCount="indefinite"
+                      rotate="auto"
+                    >
+                      <mpath href="#workflowPipelinePath"></mpath>
+                    </animateMotion>
+                  </circle>
+                  <circle
+                    class="workflow-pipeline-pulse workflow-pipeline-pulse-two"
+                    cx="120"
+                    cy="125"
+                    r="8"
+                  >
+                    <animateMotion
+                      dur="4s"
+                      begin="1.7s"
+                      repeatCount="indefinite"
+                      rotate="auto"
+                    >
+                      <mpath href="#workflowPipelinePath"></mpath>
+                    </animateMotion>
+                  </circle>
+                </svg>
+              </div>
+            </article>
+
+            <article
+              class="panel workflow-section workflow-architecture-panel"
+              id="agent-architecture"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Architecture view</p>
+                  <h2>How the agent fits into the system</h2>
+                </div>
+                <span class="chip">System map</span>
+              </div>
+              <p>
+                This architecture diagram shows where information comes from,
+                what the agent does in the middle, and where approved outputs
+                and operational evidence are stored.
+              </p>
+
+              <div class="workflow-architecture-grid">
+                <div class="workflow-architecture-column">
+                  <p class="eyebrow">Inputs</p>
+                  <article class="workflow-architecture-card is-input">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-globe"></use></svg
+                    ></span>
+                    <div>
+                      <strong>Trusted health sources</strong>
+                      <p>
+                        WHO, CDC, NIH, journals, feeds, and source URLs for
+                        current updates.
+                      </p>
+                    </div>
+                  </article>
+                  <article class="workflow-architecture-card is-input">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-database"></use></svg
+                    ></span>
+                    <div>
+                      <strong>Existing memory and history</strong>
+                      <p>
+                        Prior facts, recent blog history, and duplicate-check
+                        context.
+                      </p>
+                    </div>
+                  </article>
+                </div>
+
+                <div class="workflow-architecture-center">
+                  <div class="workflow-architecture-orbit"></div>
+                  <article class="workflow-architecture-core">
+                    <span class="workflow-lane-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-bot"></use></svg
+                    ></span>
+                    <div>
+                      <p class="eyebrow">Core engine</p>
+                      <h3>Global Health Intelligence Agent</h3>
+                      <p>
+                        Fetches, reasons, writes, validates, verifies,
+                        publishes, and logs autonomously.
+                      </p>
+                    </div>
+                  </article>
+                  <div class="workflow-architecture-mini-grid">
+                    <article class="workflow-architecture-mini-card">
+                      <strong>Workflow contract</strong>
+                      <p>
+                        <code>AGENT.md</code> + <code>MAIN_WORKFLOW.md</code>
+                      </p>
+                    </article>
+                    <article class="workflow-architecture-mini-card">
+                      <strong>Guardrails</strong>
+                      <p>Tester + verifier + duplicate checks</p>
+                    </article>
+                  </div>
+                </div>
+
+                <div class="workflow-architecture-column">
+                  <p class="eyebrow">Outputs</p>
+                  <article class="workflow-architecture-card is-output">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-rocket"></use></svg
+                    ></span>
+                    <div>
+                      <strong>Publish database</strong>
+                      <p>
+                        Approved blog content is written to the publishing
+                        tables.
+                      </p>
+                    </div>
+                  </article>
+                  <article class="workflow-architecture-card is-output">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-chart"></use></svg
+                    ></span>
+                    <div>
+                      <strong>Operational visibility</strong>
+                      <p>
+                        Dashboard, run logs, and memory store make every run
+                        inspectable.
+                      </p>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </article>
+
+            <article
+              class="panel workflow-section workflow-swimlane-panel"
+              id="agent-swimlane"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Swimlane view</p>
+                  <h2>Who or what handles each stage</h2>
+                </div>
+                <span class="chip">Responsibility map</span>
+              </div>
+              <p>
+                This swimlane diagram helps non-technical viewers understand how
+                responsibility moves across sources, the agent, quality gates,
+                and publishing/operations.
+              </p>
+
+              <div
+                class="workflow-swimlane-board"
+                role="table"
+                aria-label="AI agent swimlane diagram"
+              >
+                <div
+                  class="workflow-swimlane-head workflow-swimlane-corner"
+                  role="columnheader"
+                >
+                  Lane
+                </div>
+                <div class="workflow-swimlane-head" role="columnheader">1</div>
+                <div class="workflow-swimlane-head" role="columnheader">2</div>
+                <div class="workflow-swimlane-head" role="columnheader">3</div>
+                <div class="workflow-swimlane-head" role="columnheader">4</div>
+                <div class="workflow-swimlane-head" role="columnheader">5</div>
+                <div class="workflow-swimlane-head" role="columnheader">6</div>
+
+                <div class="workflow-swimlane-label is-source" role="rowheader">
+                  Sources
+                </div>
+                <div class="workflow-swimlane-cell is-source">
+                  <span class="workflow-swimlane-pill">Publish new update</span>
+                </div>
+                <div class="workflow-swimlane-cell is-source">
+                  <span class="workflow-swimlane-pill"
+                    >Provide article / feed data</span
+                  >
+                </div>
+                <div class="workflow-swimlane-cell is-source"></div>
+                <div class="workflow-swimlane-cell is-source"></div>
+                <div class="workflow-swimlane-cell is-source"></div>
+                <div class="workflow-swimlane-cell is-source"></div>
+
+                <div class="workflow-swimlane-label is-agent" role="rowheader">
+                  Agent
+                </div>
+                <div class="workflow-swimlane-cell is-agent">
+                  <span class="workflow-swimlane-pill">Start run</span>
+                </div>
+                <div class="workflow-swimlane-cell is-agent">
+                  <span class="workflow-swimlane-pill"
+                    >Fetch + deduplicate</span
+                  >
+                </div>
+                <div class="workflow-swimlane-cell is-agent">
+                  <span class="workflow-swimlane-pill">Select topic</span>
+                </div>
+                <div class="workflow-swimlane-cell is-agent">
+                  <span class="workflow-swimlane-pill">Research + write</span>
+                </div>
+                <div class="workflow-swimlane-cell is-agent"></div>
+                <div class="workflow-swimlane-cell is-agent">
+                  <span class="workflow-swimlane-pill">Store memory + log</span>
+                </div>
+
+                <div class="workflow-swimlane-label is-guard" role="rowheader">
+                  Quality gates
+                </div>
+                <div class="workflow-swimlane-cell is-guard"></div>
+                <div class="workflow-swimlane-cell is-guard"></div>
+                <div class="workflow-swimlane-cell is-guard">
+                  <span class="workflow-swimlane-pill">Duplicate check</span>
+                </div>
+                <div class="workflow-swimlane-cell is-guard">
+                  <span class="workflow-swimlane-pill">Validation</span>
+                </div>
+                <div class="workflow-swimlane-cell is-guard">
+                  <span class="workflow-swimlane-pill">Verification</span>
+                </div>
+                <div class="workflow-swimlane-cell is-guard"></div>
+
+                <div class="workflow-swimlane-label is-output" role="rowheader">
+                  Publishing + ops
+                </div>
+                <div class="workflow-swimlane-cell is-output"></div>
+                <div class="workflow-swimlane-cell is-output"></div>
+                <div class="workflow-swimlane-cell is-output"></div>
+                <div class="workflow-swimlane-cell is-output"></div>
+                <div class="workflow-swimlane-cell is-output">
+                  <span class="workflow-swimlane-pill"
+                    >Publish approved article</span
+                  >
+                </div>
+                <div class="workflow-swimlane-cell is-output">
+                  <span class="workflow-swimlane-pill"
+                    >Dashboard + logs updated</span
+                  >
+                </div>
+              </div>
+            </article>
+
+            <div class="workflow-slide-separator is-manual" data-step="01">
+              <div class="workflow-slide-separator-main">
+                <span class="workflow-separator-icon" aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-user"></use></svg
+                ></span>
+                <div>
+                  <p class="eyebrow">Part 1</p>
+                  <h2>Manual publishing journey</h2>
+                  <p>
+                    Human research, writing, validation, and CMS publishing with
+                    repeated handoffs.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <article class="panel workflow-section" id="manual-overview">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Before AI</p>
+                  <h2>Manual workflow overview</h2>
+                </div>
+                <span class="chip">Current state</span>
+              </div>
+              <p>
+                The current process depends on an admin or content editor to
+                constantly monitor trusted health sources, identify important
+                updates, write articles, review medical accuracy, and publish
+                each post manually inside the CMS.
+              </p>
+              <p>
+                That approach keeps content curated, but it is slow, repetitive,
+                and difficult to scale when the number of health sources and
+                important updates grows.
+              </p>
+            </article>
+
+            <article class="panel workflow-section" id="manual-roles">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Before AI</p>
+                  <h2>Roles involved</h2>
+                </div>
+              </div>
+              <div class="workflow-card-grid two-up">
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-search"></use></svg
+                    ></span>
+                    <strong>Admin / Content Manager</strong>
+                  </div>
+                  <p>
+                    Monitors global health sources and identifies relevant
+                    developments.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-pen"></use></svg
+                    ></span>
+                    <strong>Content Writer</strong>
+                  </div>
+                  <p>Turns research findings into a structured blog article.</p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-shield"></use></svg
+                    ></span>
+                    <strong>Medical Editor</strong>
+                  </div>
+                  <p>
+                    Checks terminology, facts, and clarity before publication.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-send"></use></svg
+                    ></span>
+                    <strong>Publisher</strong>
+                  </div>
+                  <p>
+                    Creates or schedules the blog entry in the platform CMS.
+                  </p>
+                </article>
+              </div>
+              <p class="workflow-note">
+                In many cases one administrator performs multiple roles, which
+                increases operational pressure and reduces throughput.
+              </p>
+            </article>
+
+            <article class="panel workflow-section" id="manual-process">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Before AI</p>
+                  <h2>Step-by-step manual process</h2>
+                </div>
+              </div>
+              <div class="workflow-steps-grid">
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">01</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-search"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Monitor sources</h3>
+                  <p>
+                    Check WHO, CDC, NIH, journals, research portals, and health
+                    news platforms.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">02</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-target"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Identify relevant updates</h3>
+                  <p>
+                    Shortlist medically relevant topics such as outbreaks,
+                    vaccines, approvals, and policy alerts.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">03</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-database"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Collect information</h3>
+                  <p>
+                    Extract facts, compare sources, save references, and
+                    organize notes manually.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">04</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-pen"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Write article</h3>
+                  <p>
+                    Create the title, introduction, key developments, healthcare
+                    impact, and conclusion.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">05</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-shield"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Review and edit</h3>
+                  <p>
+                    Validate medical terminology, statistics, readability, and
+                    source accuracy.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">06</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-presentation"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Create in CMS</h3>
+                  <p>
+                    Enter title, content, category, tags, author data, and any
+                    supporting media.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">07</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-send"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Publish</h3>
+                  <p>
+                    Publish immediately or schedule the article for later
+                    release.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="manual-pain-points">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Before AI</p>
+                  <h2>Key pain points</h2>
+                </div>
+              </div>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Time-consuming:</strong> each article can take from 90
+                  minutes to 3 hours.
+                </li>
+                <li>
+                  <strong>Repetitive:</strong> the same monitoring, copying,
+                  summarizing, and publishing tasks repeat daily.
+                </li>
+                <li>
+                  <strong>Risk of missed updates:</strong> important
+                  developments can be overlooked if a source is missed.
+                </li>
+                <li>
+                  <strong>Limited scalability:</strong> publishing multiple
+                  timely articles per day becomes difficult.
+                </li>
+                <li>
+                  <strong>Delayed publishing:</strong> critical health
+                  information may appear too late for readers.
+                </li>
+                <li>
+                  <strong>Human dependency:</strong> the workflow relies heavily
+                  on a small number of people.
+                </li>
+              </ul>
+            </article>
+
+            <div class="workflow-slide-separator is-ai" data-step="02">
+              <div class="workflow-slide-separator-main">
+                <span class="workflow-separator-icon" aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-bot"></use></svg
+                ></span>
+                <div>
+                  <p class="eyebrow">Part 2</p>
+                  <h2>AI automation journey</h2>
+                  <p>
+                    Automated monitoring, filtering, generation, and publishing
+                    with faster turnaround.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <article class="panel workflow-section" id="ai-overview">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Using AI</p>
+                  <h2>AI automated workflow overview</h2>
+                </div>
+                <span class="chip">Target state</span>
+              </div>
+              <p>
+                The Global Health Intelligence Agent automates monitoring, topic
+                filtering, content analysis, article generation, and publishing
+                so the platform can share timely health updates with minimal
+                administrative effort.
+              </p>
+              <p>
+                Instead of depending on manual research and writing, the system
+                continuously gathers updates from trusted sources and converts
+                them into structured content for healthcare professionals.
+              </p>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Example trusted sources:</strong> World Health
+                  Organization updates, Centers for Disease Control and
+                  Prevention alerts, National Institutes of Health research
+                  updates, The Lancet, Nature Medicine, and global health news
+                  APIs.
+                </li>
+              </ul>
+            </article>
+
+            <article class="panel workflow-section" id="ai-objectives">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Using AI</p>
+                  <h2>Objectives of the AI agent</h2>
+                </div>
+              </div>
+              <div class="workflow-card-grid three-up">
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-globe"></use></svg
+                    ></span>
+                    <strong>Automate monitoring</strong>
+                  </div>
+                  <p>
+                    Track trusted global health news and research continuously.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-target"></use></svg
+                    ></span>
+                    <strong>Filter importance</strong>
+                  </div>
+                  <p>Surface updates relevant to healthcare professionals.</p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-pen"></use></svg
+                    ></span>
+                    <strong>Generate articles</strong>
+                  </div>
+                  <p>Create structured blog drafts automatically.</p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-rocket"></use></svg
+                    ></span>
+                    <strong>Publish faster</strong>
+                  </div>
+                  <p>Reduce time from discovery to publication dramatically.</p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-loop"></use></svg
+                    ></span>
+                    <strong>Reduce workload</strong>
+                  </div>
+                  <p>
+                    Remove repetitive research and drafting tasks from admins.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <div class="workflow-item-head">
+                    <span class="workflow-item-icon" aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-chart"></use></svg
+                    ></span>
+                    <strong>Scale output</strong>
+                  </div>
+                  <p>
+                    Support multiple articles per day without proportional
+                    manual effort.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="ai-process">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Using AI</p>
+                  <h2>Step-by-step AI process</h2>
+                </div>
+              </div>
+              <div class="workflow-steps-grid">
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">01</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-clock"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Scheduled execution</h3>
+                  <p>
+                    Run on cron intervals such as every 30 minutes, hourly, or
+                    daily.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">02</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-globe"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Collect updates</h3>
+                  <p>
+                    Fetch news from APIs, RSS feeds, and trusted medical
+                    sources.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">03</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-target"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Filter topics</h3>
+                  <p>
+                    Keep infectious diseases, vaccine news, drug approvals,
+                    research, and public health alerts.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">04</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-loop"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Detect duplicates</h3>
+                  <p>
+                    Check title similarity, topic overlap, time window, and
+                    source duplication.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">05</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-spark"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Analyze with AI</h3>
+                  <p>
+                    Extract findings, statistics, clinical relevance, and core
+                    impact.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">06</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-pen"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Generate the blog</h3>
+                  <p>
+                    Produce title, introduction, developments, healthcare
+                    impact, and conclusion.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">07</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-database"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Store article</h3>
+                  <p>
+                    Save the generated record with draft, pending review, or
+                    published status.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <div class="workflow-step-top">
+                    <span class="workflow-step-index">08</span>
+                    <span
+                      class="workflow-item-icon workflow-step-icon"
+                      aria-hidden="true"
+                      ><svg class="workflow-svg-icon">
+                        <use href="#wf-icon-rocket"></use></svg
+                    ></span>
+                  </div>
+                  <h3>Publish or review</h3>
+                  <p>
+                    Auto-publish immediately or route to an editor for approval.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="ai-benefits">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Using AI</p>
+                  <h2>Key benefits</h2>
+                </div>
+              </div>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Continuous monitoring:</strong> the platform watches
+                  global updates 24/7.
+                </li>
+                <li>
+                  <strong>Faster publishing:</strong> important information can
+                  move to publication almost immediately.
+                </li>
+                <li>
+                  <strong>Reduced manual work:</strong> administrators spend
+                  less time searching and writing.
+                </li>
+                <li>
+                  <strong>Scalable generation:</strong> more articles can be
+                  produced without increasing operational load.
+                </li>
+                <li>
+                  <strong>Consistent structure:</strong> AI output follows a
+                  stable, professional article format.
+                </li>
+              </ul>
+            </article>
+
+            <div class="workflow-slide-separator is-neutral" data-step="03">
+              <div class="workflow-slide-separator-main">
+                <span class="workflow-separator-icon" aria-hidden="true"
+                  ><svg class="workflow-svg-icon">
+                    <use href="#wf-icon-chart"></use></svg
+                ></span>
+                <div>
+                  <p class="eyebrow">Part 3</p>
+                  <h2>Final executive takeaway</h2>
+                  <p>
+                    The final message is a shift from manual effort to scalable,
+                    faster, intelligence-driven publishing.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <article class="panel workflow-section" id="final-outcome">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Outcome</p>
+                  <h2>Final presentation takeaway</h2>
+                </div>
+              </div>
+              <p>
+                The platform shifts from a manual content operation into an
+                automated global health intelligence system. The result is
+                faster publication, stronger coverage, lower administrative
+                burden, and a more scalable way to deliver relevant health
+                updates to professionals.
+              </p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>

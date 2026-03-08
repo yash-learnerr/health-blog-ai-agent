@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health AI Agent Run Guide</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("health-agent-theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : prefersDark
+                ? "dark"
+                : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+
+  <body data-page="run-guide">
+    <div class="shell">
+      <div class="hero-stack">
+        <header class="hero">
+          <div class="app-header-brand">
+            <span class="app-header-kicker">Health AI Agent</span>
+            <strong>Run guide</strong>
+          </div>
+          <nav class="hero-nav">
+            <div class="hero-nav-links">
+              <a class="nav-link" href="/">Dashboard</a>
+              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+              <a class="nav-link" href="/frontend/blog-workflow.html">Workflow</a>
+              <a class="nav-link" href="/frontend/agent-adoption-guide.html">Adoption Guide</a>
+              <a class="nav-link active" href="/frontend/run-guide.html">Run Guide</a>
+            </div>
+            <button class="theme-toggle" id="theme-toggle" type="button" aria-pressed="false" aria-label="Switch to dark mode">
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-moon">☾</span>
+              </span>
+            </button>
+          </nav>
+        </header>
+        <div class="hero-divider" aria-hidden="true"></div>
+      </div>
+
+      <main class="page-content">
+        <section class="page-intro workflow-hero">
+          <div>
+            <p class="eyebrow">Local startup guide</p>
+            <h1>How to run this project directory</h1>
+            <p class="hero-copy">
+              A frontend reference page for starting the autonomous workflow,
+              opening the live dashboard, and using the helper scripts already
+              included in this repository.
+            </p>
+            <div class="workflow-badge-row">
+              <span class="workflow-pill">Read docs first</span>
+              <span class="workflow-pill is-ai">Run the agent workflow</span>
+              <span class="workflow-pill">Open dashboard outputs</span>
+            </div>
+          </div>
+          <aside class="workflow-hero-highlight">
+            <span class="workflow-highlight-label">Fastest path</span>
+            <strong>Read the contract, then run one command</strong>
+            <ul class="workflow-hero-points">
+              <li><span aria-hidden="true">✓</span> Review `AGENT.md`</li>
+              <li><span aria-hidden="true">✓</span> Review `docs/workflows/MAIN_WORKFLOW.md`</li>
+              <li><span aria-hidden="true">✓</span> Start with PowerShell or Python</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="workflow-summary-strip">
+          <article class="workflow-summary-card"><span class="label">Primary goal</span><strong>Run the workflow</strong><p>Use the launcher or Python entrypoint to execute the end-to-end publishing flow.</p></article>
+          <article class="workflow-summary-card"><span class="label">Observe it</span><strong>Dashboard</strong><p>Serve the live dashboard locally or generate a static snapshot in `frontend/dashboard.html`.</p></article>
+          <article class="workflow-summary-card"><span class="label">Loop mode</span><strong>Recurring runs</strong><p>Use the shell loop helper if you want the same command to restart after a cooldown.</p></article>
+          <article class="workflow-summary-card"><span class="label">Config files</span><strong>Repo anchors</strong><p>Use `.env.example`, `config/*.md`, and the README commands as your operating reference.</p></article>
+        </section>
+
+        <section class="workflow-layout">
+          <div class="workflow-content">
+            <article class="panel workflow-section" id="before-you-start">
+              <div class="panel-head"><div><p class="eyebrow">Step 1</p><h2>Before you start</h2></div></div>
+              <ul class="workflow-bullet-list">
+                <li>Read `AGENT.md` and `docs/workflows/MAIN_WORKFLOW.md` before triggering the workflow.</li>
+                <li>Review `.env.example` and database settings under `config/DATABASE.md` if you need environment-specific setup.</li>
+                <li>Use `config/NEWS_SOURCES.md` and `config/SCHEDULER.md` if you are adjusting sources or scheduling behavior.</li>
+              </ul>
+            </article>
+
+            <article class="panel workflow-section" id="run-commands">
+              <div class="panel-head"><div><p class="eyebrow">Step 2</p><h2>Main run commands</h2></div></div>
+              <div class="table-wrap workflow-table-wrap">
+                <table>
+                  <thead><tr><th>Use case</th><th>Command</th></tr></thead>
+                  <tbody>
+                    <tr><td>Start through PowerShell launcher</td><td><code>powershell -ExecutionPolicy Bypass -File .\scripts\start_agent.ps1</code></td></tr>
+                    <tr><td>Start directly through Python</td><td><code>python scripts/run_workflow.py --recency-hours-24</code></td></tr>
+                    <tr><td>Run continuously with cooldown</td><td><code>COOLDOWN_SECONDS=120 bash scripts/run_agent_loop.sh &lt;your-command&gt;</code></td></tr>
+                    <tr><td>Backfill a missing blog file</td><td><code>python3 scripts/blog_file_manager.py --blog-id 5</code></td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="dashboard-tools">
+              <div class="panel-head"><div><p class="eyebrow">Step 3</p><h2>Dashboard and monitoring</h2></div></div>
+              <ul class="workflow-bullet-list">
+                <li>Serve the live dashboard locally with <code>python3 scripts/agent_dashboard.py --serve --port 8765</code>.</li>
+                <li>Generate a static dashboard snapshot with <code>python3 scripts/agent_dashboard.py --output frontend/dashboard.html</code>.</li>
+                <li>Use `logs/RUN_LOG.md` and `logs/MEMORY_STORE.md` as repository-visible audit trails.</li>
+              </ul>
+            </article>
+
+            <article class="panel workflow-section" id="what-to-open">
+              <div class="panel-head"><div><p class="eyebrow">Step 4</p><h2>What to open after startup</h2></div></div>
+              <div class="workflow-card-grid two-up">
+                <article class="workflow-mini-card"><strong>Live UI</strong><p>Open the served dashboard if you launched `scripts/agent_dashboard.py --serve`.</p></article>
+                <article class="workflow-mini-card"><strong>Static fallback</strong><p>Open `frontend/dashboard.html` if you generated the snapshot instead of serving.</p></article>
+                <article class="workflow-mini-card"><strong>Workflow view</strong><p>Use `frontend/blog-workflow.html` for presentation and process explanation.</p></article>
+                <article class="workflow-mini-card"><strong>Operational proof</strong><p>Check `logs/RUN_LOG.md` for run history and execution evidence.</p></article>
+              </div>
+            </article>
+          </div>
+
+          <aside class="panel workflow-sidebar">
+            <div class="workflow-sidebar-head"><p class="eyebrow">On this page</p><h2>Quick links</h2></div>
+            <nav class="workflow-toc" aria-label="Run guide sections">
+              <a class="workflow-toc-link" href="#before-you-start">Before you start</a>
+              <a class="workflow-toc-link" href="#run-commands">Main run commands</a>
+              <a class="workflow-toc-link" href="#dashboard-tools">Dashboard and monitoring</a>
+              <a class="workflow-toc-link" href="#what-to-open">What to open after startup</a>
+            </nav>
+          </aside>
+        </section>
+      </main>
+    </div>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>
+

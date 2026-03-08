@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health AI Agent Dashboard</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("health-agent-theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : prefersDark
+                ? "dark"
+                : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+
+  <body data-page="dashboard">
+    <div class="shell">
+      <div class="hero-stack">
+        <header class="hero">
+          <div class="app-header-brand">
+            <span class="app-header-kicker">Health AI Agent</span>
+            <strong></strong>
+          </div>
+          <nav class="hero-nav">
+            <div class="hero-nav-links">
+              <a class="nav-link active" href="/">Dashboard</a>
+              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+              <a class="nav-link" href="/frontend/blog-workflow.html"
+                >Workflow</a
+              >
+              <a class="nav-link" href="/frontend/agent-adoption-guide.html"
+                >Adoption Guide</a
+              >
+              <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+            </div>
+            <button
+              class="theme-toggle"
+              id="theme-toggle"
+              type="button"
+              aria-pressed="false"
+              aria-label="Switch to dark mode"
+            >
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-moon"
+                  >☾</span
+                >
+              </span>
+            </button>
+          </nav>
+        </header>
+        <div class="hero-divider" aria-hidden="true"></div>
+      </div>
+
+      <main class="page-content">
+        <section class="page-intro">
+          <p class="eyebrow">Operational command center</p>
+          <h1>Health AI agent dashboard</h1>
+          <p class="hero-copy">
+            Live monitoring for runs, logs, memory facts, and token usage pulled
+            from the configured operational source.
+          </p>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Getting started</p>
+              <h2>Need to run this project locally?</h2>
+            </div>
+          </div>
+          <div class="workflow-card-grid two-up">
+            <article class="workflow-mini-card">
+              <strong>Open the run guide</strong>
+              <p>
+                View the step-by-step startup commands, dashboard options, and
+                key files to open after launch.
+              </p>
+              <p>
+                <a class="blog-link secondary" href="/frontend/run-guide.html"
+                  >Open Run Guide</a
+                >
+              </p>
+            </article>
+          </div>
+        </section>
+
+        <section class="metrics-grid" id="metric-cards"></section>
+
+        <section class="panel-grid">
+          <article class="panel chart-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">7 day trend</p>
+                <h2>Activity by day</h2>
+              </div>
+            </div>
+            <div class="bar-chart" id="activity-chart"></div>
+          </article>
+
+          <article class="panel chart-panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Usage profile</p>
+                <h2>Token totals</h2>
+              </div>
+            </div>
+            <div class="bar-chart compact" id="token-chart"></div>
+          </article>
+        </section>
+
+        <section class="panel-grid">
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Recent execution</p>
+                <h2>Runs</h2>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Run ID</th>
+                    <th>Events</th>
+                    <th>Success</th>
+                    <th>Error</th>
+                    <th>Requests</th>
+                    <th>Total tokens</th>
+                    <th>Last seen</th>
+                  </tr>
+                </thead>
+                <tbody id="runs-body"></tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-head">
+              <div>
+                <p class="eyebrow">Knowledge store</p>
+                <h2>Recent memory facts</h2>
+              </div>
+            </div>
+            <div class="memory-list" id="memory-list"></div>
+          </article>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Detailed audit</p>
+              <h2>Latest run logs</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Created</th>
+                  <th>Run ID</th>
+                  <th>Step</th>
+                  <th>Status</th>
+                  <th>Item</th>
+                  <th>Message</th>
+                </tr>
+              </thead>
+              <tbody id="logs-body"></tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <template id="empty-state-template">
+      <div class="empty-state">No data available.</div>
+    </template>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health AI Agent Blog Detail</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("health-agent-theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : prefersDark
+                ? "dark"
+                : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+
+  <body data-page="blog-detail">
+    <div class="shell">
+      <div class="hero-stack">
+        <header class="hero">
+          <div class="app-header-brand">
+            <span class="app-header-kicker">Health AI Agent</span>
+            <strong></strong>
+          </div>
+          <nav class="hero-nav">
+            <div class="hero-nav-links">
+              <a class="nav-link" href="/">Dashboard</a>
+              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+              <a class="nav-link" href="/frontend/blog-workflow.html"
+                >Workflow</a
+              >
+              <a class="nav-link" href="/frontend/agent-adoption-guide.html"
+                >Adoption Guide</a
+              >
+              <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+            </div>
+            <button
+              class="theme-toggle"
+              id="theme-toggle"
+              type="button"
+              aria-pressed="false"
+              aria-label="Switch to dark mode"
+            >
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-moon"
+                  >☾</span
+                >
+              </span>
+            </button>
+          </nav>
+        </header>
+        <div class="hero-divider" aria-hidden="true"></div>
+      </div>
+
+      <main class="page-content">
+        <section class="page-intro">
+          <p class="eyebrow">Published article</p>
+          <h1 id="detail-title">Loading blog...</h1>
+          <p class="hero-copy" id="detail-summary">
+            Fetching the latest content from the publish database.
+          </p>
+        </section>
+
+        <section class="status-strip">
+          <div>
+            <span class="label">Category</span>
+            <strong id="detail-category">Loading...</strong>
+          </div>
+          <div>
+            <span class="label">Created</span>
+            <strong id="detail-created">Loading...</strong>
+          </div>
+        </section>
+
+        <article class="detail-layout">
+          <div class="detail-main panel">
+            <div class="detail-media" id="detail-media"></div>
+            <div class="detail-actions" id="detail-actions"></div>
+            <div class="detail-content" id="detail-content"></div>
+          </div>
+        </article>
+      </main>
+    </div>
+
+    <template id="empty-state-template">
+      <div class="empty-state">No data available.</div>
+    </template>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>

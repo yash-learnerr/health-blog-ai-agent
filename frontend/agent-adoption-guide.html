@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Health AI Agent Adoption Guide</title>
+    <script>
+      (function () {
+        try {
+          const stored = localStorage.getItem("health-agent-theme");
+          const prefersDark =
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
+          document.documentElement.dataset.theme =
+            stored === "dark" || stored === "light"
+              ? stored
+              : prefersDark
+                ? "dark"
+                : "light";
+        } catch (error) {
+          document.documentElement.dataset.theme = "light";
+        }
+      })();
+    </script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/frontend/styles.css" />
+  </head>
+
+  <body data-page="agent-adoption-guide">
+    <div class="shell">
+      <div class="hero-stack">
+        <header class="hero">
+          <div class="app-header-brand">
+            <span class="app-header-kicker">Health AI Agent</span>
+            <strong></strong>
+          </div>
+          <nav class="hero-nav">
+            <div class="hero-nav-links">
+              <a class="nav-link" href="/">Dashboard</a>
+              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+              <a class="nav-link" href="/frontend/blog-workflow.html"
+                >Workflow</a
+              >
+              <a
+                class="nav-link active"
+                href="/frontend/agent-adoption-guide.html"
+                >Adoption Guide</a
+              >
+              <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+            </div>
+            <button
+              class="theme-toggle"
+              id="theme-toggle"
+              type="button"
+              aria-pressed="false"
+              aria-label="Switch to dark mode"
+            >
+              <span class="theme-toggle-track" aria-hidden="true">
+                <span class="theme-toggle-thumb"></span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                <span class="theme-toggle-glyph theme-toggle-glyph-moon"
+                  >☾</span
+                >
+              </span>
+            </button>
+          </nav>
+        </header>
+        <div class="hero-divider" aria-hidden="true"></div>
+      </div>
+
+      <main class="page-content">
+        <section class="page-intro">
+          <p class="eyebrow">Adoption guide</p>
+          <h1>
+            What must change to use this AI agent in another project or with
+            other AI tools
+          </h1>
+          <p class="hero-copy">
+            A practical guide for reusing the current Markdown-defined health
+            publishing agent in a different product, backend, domain, or AI
+            provider stack.
+          </p>
+        </section>
+
+        <section class="workflow-summary-strip">
+          <article class="workflow-summary-card">
+            <span class="label">Core idea</span>
+            <strong>Reuse the workflow</strong>
+            <p>
+              Keep the architecture, execution order, testing, verification, and
+              memory pattern. Replace project-specific contracts and
+              integrations.
+            </p>
+          </article>
+          <article class="workflow-summary-card">
+            <span class="label">Main project changes</span>
+            <strong>Domain + data target</strong>
+            <p>
+              Update sources, categories, prompts, templates, database schema,
+              publish API, and environment settings for the new product.
+            </p>
+          </article>
+          <article class="workflow-summary-card">
+            <span class="label">Main AI changes</span>
+            <strong>Provider + tool adapter</strong>
+            <p>
+              Swap the model/tool integration, structured output handling, cost
+              limits, and permissions while preserving the workflow contract.
+            </p>
+          </article>
+          <article class="workflow-summary-card">
+            <span class="label">Repo anchors</span>
+            <strong>Markdown-defined system</strong>
+            <p>
+              The current repo is driven by `AGENT.md`, `docs/workflows`,
+              `docs/prompts`, `docs/templates`, and `config/*.md`.
+            </p>
+          </article>
+        </section>
+
+        <section class="workflow-layout workflow-layout--single">
+          <div class="workflow-content">
+            <article class="panel workflow-section" id="quick-changes-table">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Quick idea</p>
+                  <h2>Required changes table</h2>
+                </div>
+              </div>
+              <div class="table-wrap workflow-table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Area</th>
+                      <th>What changes in another project</th>
+                      <th>Current repo anchor</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td>Domain mission</td>
+                      <td>
+                        Replace health-blog mission, audience, evidence rules,
+                        and success criteria.
+                      </td>
+                      <td>`AGENT.md`, verifier/docs</td>
+                    </tr>
+                    <tr>
+                      <td>Sources</td>
+                      <td>
+                        Use project-relevant feeds, APIs, sites, and credibility
+                        tiers.
+                      </td>
+                      <td>`config/NEWS_SOURCES.md`</td>
+                    </tr>
+                    <tr>
+                      <td>Workflow prompts</td>
+                      <td>
+                        Rewrite fetch, filter, research, write, and validate
+                        prompts for the new use case.
+                      </td>
+                      <td>`docs/prompts/*.md`</td>
+                    </tr>
+                    <tr>
+                      <td>Output format</td>
+                      <td>
+                        Replace blog template, content sections, metadata
+                        fields, and tone.
+                      </td>
+                      <td>`docs/templates/BLOG_TEMPLATE.md`</td>
+                    </tr>
+                    <tr>
+                      <td>Publish target</td>
+                      <td>
+                        Map to the new database, CMS, API, or file destination.
+                      </td>
+                      <td>`README.md`, `scripts/publish_blogs.py`</td>
+                    </tr>
+                    <tr>
+                      <td>Operational storage</td>
+                      <td>
+                        Create or map memory, run logs, retry logs, and status
+                        tracking tables.
+                      </td>
+                      <td>`health_ai_agent`, `logs/`</td>
+                    </tr>
+                    <tr>
+                      <td>Scheduler</td>
+                      <td>
+                        Adjust trigger frequency, cron, run limits, and timeout
+                        rules.
+                      </td>
+                      <td>`config/SCHEDULER.md`</td>
+                    </tr>
+                    <tr>
+                      <td>AI provider/tooling</td>
+                      <td>
+                        Swap model APIs, structured output parsing, limits, and
+                        permissions.
+                      </td>
+                      <td>
+                        prompt contracts + target backend AI service layer
+                      </td>
+                    </tr>
+                    <tr>
+                      <td>Frontend/admin UX</td>
+                      <td>
+                        Expose the new outputs, run status, and review/publish
+                        actions in the target product.
+                      </td>
+                      <td>`frontend/`, target app UI</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="what-stays-the-same">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Reuse</p>
+                  <h2>What can stay the same</h2>
+                </div>
+              </div>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Layered structure:</strong> keep the architecture,
+                  runner, planner, execution, tester, verifier, and publisher
+                  separation described in `README.md` and `AGENT.md`.
+                </li>
+                <li>
+                  <strong>Markdown-defined contracts:</strong> keep the pattern
+                  where behavior is driven by Markdown files under `docs/`,
+                  `config/`, and `logs/`.
+                </li>
+                <li>
+                  <strong>Execution sequence:</strong> source fetch → filtering
+                  → duplicate check → research → writing → testing →
+                  verification → publish → memory/logging.
+                </li>
+                <li>
+                  <strong>Operational principles:</strong> use memory reuse,
+                  structured outputs, validation gates, retry/skip behavior, and
+                  detailed run logs.
+                </li>
+              </ul>
+            </article>
+
+            <article
+              class="panel workflow-section"
+              id="project-specific-changes"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Project adaptation</p>
+                  <h2>Changes required for another project</h2>
+                </div>
+              </div>
+              <div class="workflow-card-grid two-up">
+                <article class="workflow-mini-card">
+                  <strong>Mission and audience</strong>
+                  <p>
+                    Replace the healthcare-professional mission with the target
+                    product audience, business goals, and domain restrictions.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <strong>Source strategy</strong>
+                  <p>
+                    Replace health bodies and journals with the trusted sources
+                    that matter for the target project.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <strong>Planner rules</strong>
+                  <p>
+                    Change topic selection, scoring, categories, and
+                    publish-worthiness rules in planner and verifier documents.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <strong>Template and tone</strong>
+                  <p>
+                    Change the article/report structure, metadata fields,
+                    formatting rules, and content voice.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="data-and-publishing">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Integration</p>
+                  <h2>Data model and publishing changes</h2>
+                </div>
+              </div>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Publish destination:</strong> the current repo
+                  publishes to MySQL targets like
+                  `mydrscripts_new.blog_category` and
+                  `mydrscripts_new.blog_master`. Another project may require a
+                  different schema, a CMS API, a queue, or object storage.
+                </li>
+                <li>
+                  <strong>Operational database:</strong> create an equivalent to
+                  `health_ai_agent` for memory reuse, run logs, retries, and
+                  execution visibility.
+                </li>
+                <li>
+                  <strong>Environment variables:</strong> update `.env`
+                  expectations for host, port, credentials, publish DB name,
+                  agent DB name, and any storage keys.
+                </li>
+                <li>
+                  <strong>Publishing scripts:</strong> replace assumptions
+                  inside workflow/publish scripts so insert/update payloads
+                  match the new project fields.
+                </li>
+              </ul>
+            </article>
+
+            <article
+              class="panel workflow-section"
+              id="prompt-and-template-changes"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Contracts</p>
+                  <h2>Prompt, role, and template changes</h2>
+                </div>
+              </div>
+              <p>
+                The current agent depends on prompt and role files such as
+                `docs/prompts/FETCH_NEWS_PROMPT.md`, `FILTER_PROMPT.md`,
+                `RESEARCH_PROMPT.md`, `WRITE_PROMPT.md`, `VALIDATE_PROMPT.md`,
+                plus specialist roles under `docs/roles/`.
+              </p>
+              <ul class="workflow-bullet-list">
+                <li>
+                  Rewrite each prompt to match the new domain vocabulary and
+                  output expectations.
+                </li>
+                <li>
+                  Replace healthcare evidence language with the quality rubric
+                  that fits the new product.
+                </li>
+                <li>
+                  Update category mapping, duplicate rules, approval gates, and
+                  required output schema.
+                </li>
+                <li>
+                  Update `docs/templates/BLOG_TEMPLATE.md` or replace it with
+                  the target format entirely.
+                </li>
+              </ul>
+            </article>
+
+            <article
+              class="panel workflow-section"
+              id="scheduler-and-operations"
+            >
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Operations</p>
+                  <h2>Scheduler, limits, and observability changes</h2>
+                </div>
+              </div>
+              <p>
+                The current schedule is defined in `config/SCHEDULER.md` with a
+                recurring run, run limits, and timeout expectations.
+              </p>
+              <div class="workflow-card-grid three-up">
+                <article class="workflow-mini-card">
+                  <strong>Frequency</strong>
+                  <p>
+                    Adjust the cron cadence to match how often the new domain
+                    changes.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <strong>Run limits</strong>
+                  <p>
+                    Change max topics, max outputs, and timeout rules for the
+                    new workload size.
+                  </p>
+                </article>
+                <article class="workflow-mini-card">
+                  <strong>Visibility</strong>
+                  <p>
+                    Preserve run logs, status events, and dashboard exposure so
+                    failures stay observable.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="other-ai-tools">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">AI tooling</p>
+                  <h2>
+                    Changes required for other AI tools or model providers
+                  </h2>
+                </div>
+              </div>
+              <ul class="workflow-bullet-list">
+                <li>
+                  <strong>Provider adapter:</strong> replace the current
+                  model/tool calling layer with the new provider SDK, API shape,
+                  auth, retries, and timeout handling.
+                </li>
+                <li>
+                  <strong>Structured output compatibility:</strong> confirm the
+                  new model can reliably produce the schemas expected by the
+                  tester and verifier stages.
+                </li>
+                <li>
+                  <strong>Tool permissions:</strong> ensure the new runtime
+                  supports web access, local command execution, file access, and
+                  any browser-assisted verification you require.
+                </li>
+                <li>
+                  <strong>Cost and latency policy:</strong> update token/cost
+                  limits, batching behavior, and fallback rules based on the new
+                  provider.
+                </li>
+                <li>
+                  <strong>Multimodal or voice features:</strong> if the target
+                  product includes voice or note generation, map equivalent
+                  services to patterns like the backend `OpenAIService.js`,
+                  `AiTalkService.js`, and `MedicalScribeService.js` described in
+                  architecture docs.
+                </li>
+              </ul>
+            </article>
+
+            <article class="panel workflow-section" id="migration-plan">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Recommended approach</p>
+                  <h2>Suggested migration plan</h2>
+                </div>
+              </div>
+              <div class="workflow-steps-grid">
+                <article class="workflow-step-card">
+                  <span class="workflow-step-index">01</span>
+                  <h3>Define the new mission</h3>
+                  <p>
+                    Write the new audience, outputs, data sources, and quality
+                    bar first.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <span class="workflow-step-index">02</span>
+                  <h3>Map the target system</h3>
+                  <p>
+                    Identify the target schema, API endpoints, publish surfaces,
+                    and operational log store.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <span class="workflow-step-index">03</span>
+                  <h3>Rewrite contracts</h3>
+                  <p>
+                    Update AGENT, prompts, templates, roles, planner logic, and
+                    verifier rules.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <span class="workflow-step-index">04</span>
+                  <h3>Swap provider adapters</h3>
+                  <p>
+                    Integrate the target AI model/tool and test structured
+                    outputs under real limits.
+                  </p>
+                </article>
+                <article class="workflow-step-card">
+                  <span class="workflow-step-index">05</span>
+                  <h3>Validate end to end</h3>
+                  <p>
+                    Run tests, dry-runs, duplicate checks, and controlled
+                    publish verification before production use.
+                  </p>
+                </article>
+              </div>
+            </article>
+
+            <article class="panel workflow-section" id="final-recommendation">
+              <div class="panel-head">
+                <div>
+                  <p class="eyebrow">Takeaway</p>
+                  <h2>Best way to reuse this agent</h2>
+                </div>
+              </div>
+              <p>
+                The safest path is to treat this repository as a reusable agent
+                framework: keep the layered workflow, memory/logging discipline,
+                and publish gate, but replace the domain contracts,
+                integrations, data model, and AI provider assumptions that are
+                specific to MyDrScripts health publishing.
+              </p>
+            </article>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="/frontend/app.js"></script>
+  </body>
+</html>
