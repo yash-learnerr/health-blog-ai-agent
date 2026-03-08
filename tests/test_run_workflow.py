@@ -393,6 +393,105 @@ class RunWorkflowTests(unittest.TestCase):
         self.assertNotIn('health_ai_agent', captured['sql'])
         self.assertEqual(captured['publish_db'], 'publish_db')
 
+    def test_build_learning_blog_passes_validation_and_verification(self):
+        blog = mod.build_learning_blog(
+            'workflow-20260308T000000Z-test',
+            'No blogs were available for publication.',
+            details={'article_count': 0, 'selected_topic_count': 0, 'news_error': 'all feeds empty'},
+        )
+
+        valid, validation_reason = mod.validate_blog(blog)
+        self.assertTrue(valid, validation_reason)
+        with mock.patch.object(mod, 'duplicate_exists', return_value=(False, '')):
+            verified, verify_reason = mod.verify_blog(blog)
+        self.assertTrue(verified, verify_reason)
+        self.assertEqual(blog['category_name'], 'Learning')
+        self.assertIn('learning-update', blog['slug'])
+
+    def test_run_workflow_publishes_learning_fallback_when_no_topics_found(self):
+        captured = {}
+        learning_blog = {
+            'blog_id': 901,
+            'slug': 'learning-update-run-1',
+            'title': 'Learning fallback',
+            'category_name': 'Learning',
+            'summary': 'Summary',
+            'content': 'Content',
+            'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
+            'research': {'confirmed_findings': []},
+        }
+
+        with mock.patch.object(mod.agent_db, 'load_env', return_value=None), \
+             mock.patch.object(mod.agent_db, 'current_run_id', return_value='run-1'), \
+             mock.patch.object(mod.agent_db, 'database_backend', return_value='mysql.connector'), \
+             mock.patch.object(mod.agent_db, 'safe_log_event', side_effect=lambda *args, **kwargs: captured.setdefault('logs', []).append((args, kwargs)) or True), \
+             mock.patch.object(mod, 'ensure_publish_tables', return_value=None), \
+             mock.patch.object(mod, 'fetch_memory_context', return_value=[]), \
+             mock.patch.object(mod, 'fetch_recent_news', return_value=[]), \
+             mock.patch.object(mod, 'select_topics', return_value=[]), \
+             mock.patch.object(mod, 'publish_learning_fallback', return_value=learning_blog) as publish_helper, \
+             mock.patch.object(mod, 'update_markdown_mirrors', side_effect=lambda run_id, published, memory: captured.update({'run_id': run_id, 'published': published, 'memory': memory})):
+            result = mod.run_workflow(recency_hours=24)
+
+        self.assertEqual(result, 0)
+        publish_helper.assert_called_once()
+        self.assertEqual(captured['published'], [learning_blog])
+        self.assertEqual(captured['memory'], [])
+        messages = [args[3] for args, _kwargs in captured['logs']]
+        self.assertIn('No relevant non-duplicate topics this run.', messages)
+        self.assertIn('Workflow completed with 1 published blogs.', messages)
+
+    def test_run_workflow_publishes_learning_fallback_when_all_topics_fail(self):
+        source = mod.SourceConfig('WHO', 'https://feeds.example.com/who.xml', 'https://www.who.int/news', 1)
+        article = mod.Article(
+            title='Topic title',
+            url='https://example.com/topic',
+            source='WHO',
+            published_at=mod.now_utc(),
+            description='Topic description',
+            source_feed_url=source.feed_url,
+            tier=1,
+        )
+        topic = {
+            'article': article,
+            'slug': 'topic-title',
+            'category_name': 'Public Health',
+            'category_slug': 'public-health',
+            'key_insight': article.description,
+        }
+        learning_blog = {
+            'blog_id': 902,
+            'slug': 'learning-update-run-2',
+            'title': 'Learning fallback',
+            'category_name': 'Learning',
+            'summary': 'Summary',
+            'content': 'Content',
+            'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
+            'research': {'confirmed_findings': []},
+        }
+        captured = {}
+
+        with mock.patch.object(mod.agent_db, 'load_env', return_value=None), \
+             mock.patch.object(mod.agent_db, 'current_run_id', return_value='run-2'), \
+             mock.patch.object(mod.agent_db, 'database_backend', return_value='mysql.connector'), \
+             mock.patch.object(mod.agent_db, 'safe_log_event', side_effect=lambda *args, **kwargs: captured.setdefault('logs', []).append((args, kwargs)) or True), \
+             mock.patch.object(mod, 'ensure_publish_tables', return_value=None), \
+             mock.patch.object(mod, 'fetch_memory_context', return_value=[]), \
+             mock.patch.object(mod, 'fetch_recent_news', return_value=[article]), \
+             mock.patch.object(mod, 'select_topics', return_value=[topic]), \
+             mock.patch.object(mod, 'research_topic', side_effect=RuntimeError('insufficient article body extracted for evidence-grounded writing')), \
+             mock.patch.object(mod, 'publish_learning_fallback', return_value=learning_blog) as publish_helper, \
+             mock.patch.object(mod, 'update_markdown_mirrors', side_effect=lambda run_id, published, memory: captured.update({'run_id': run_id, 'published': published, 'memory': memory})):
+            result = mod.run_workflow(recency_hours=24)
+
+        self.assertEqual(result, 0)
+        publish_helper.assert_called_once()
+        self.assertEqual(captured['published'], [learning_blog])
+        self.assertEqual(captured['memory'], [])
+        messages = [args[3] for args, _kwargs in captured['logs']]
+        self.assertIn('Workflow completed with 1 published blogs.', messages)
+        self.assertTrue(any(args[1] == 'topic_execution' and args[2] == 'ERROR' for args, _kwargs in captured['logs']))
+
 
 if __name__ == '__main__':
     unittest.main()

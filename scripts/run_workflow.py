@@ -28,6 +28,8 @@ USER_AGENT = 'GlobalHealthIntelligenceAgent/1.0'
 MAX_TOPICS = 3
 MIN_CONTENT_WORDS = 700
 MAX_CONTENT_WORDS = 1200
+LEARNING_CATEGORY_NAME = 'Learning'
+LEARNING_CATEGORY_SLUG = 'learning'
 
 
 @dataclass
@@ -570,6 +572,158 @@ def build_keywords(title, description, category_name):
     return keywords[:8]
 
 
+def _learning_detail_lines(details=None):
+    details = details or {}
+    lines = []
+    article_count = details.get('article_count')
+    if article_count is not None:
+        lines.append(f"- Candidate articles reviewed in this run: **{int(article_count)}**.")
+    selected_topic_count = details.get('selected_topic_count')
+    if selected_topic_count is not None:
+        lines.append(f"- Topics selected for deeper work: **{int(selected_topic_count)}**.")
+    news_error = str(details.get('news_error') or '').strip()
+    if news_error:
+        lines.append(f"- News retrieval issue recorded during this run: `{news_error}`.")
+    for failure in (details.get('topic_failures') or [])[:3]:
+        slug = str(failure.get('slug') or 'topic').strip()
+        reason = str(failure.get('reason') or 'no detailed reason recorded').strip()
+        lines.append(f"- Topic `{slug}` could not be published because **{reason}**.")
+    return '\n'.join(lines) or '- The workflow captured no additional diagnostics beyond the absence of publishable material.'
+
+
+def build_learning_blog(run_id, reason, details=None):
+    timestamp = now_utc()
+    title = 'Learning update: no publishable blog was available in this run'
+    slug = slugify(f'learning-update-{run_id}')
+    summary = (
+        'No evidence-grounded, non-duplicate blog could be published in this workflow run, '
+        'so the agent created a Learning-category post that explains what happened and what to review next.'
+    )
+    detail_lines = _learning_detail_lines(details)
+    confirmed_findings = [
+        {
+            'claim': 'The workflow did not find enough reliable, publishable material to issue a standard medical news article in this run.',
+            'confidence': 'Moderate',
+        },
+        {
+            'claim': 'Instead of inventing unsupported claims, the system preserved its evidence threshold and recorded the gap transparently.',
+            'confidence': 'High',
+        },
+        {
+            'claim': 'A Learning-category post was generated so the frontend and publishing pipeline still communicate the workflow outcome clearly.',
+            'confidence': 'High',
+        },
+    ]
+    references = [
+        {'name': 'AGENT workflow contract', 'url': 'AGENT.md'},
+        {'name': 'Main workflow guide', 'url': 'docs/workflows/MAIN_WORKFLOW.md'},
+        {'name': 'Run log mirror', 'url': 'logs/RUN_LOG.md'},
+    ]
+    content = f"""# {title}
+
+**Published by:** Global Health Intelligence Agent  
+**Category:** {LEARNING_CATEGORY_NAME}  
+**Reading Time:** ~4 min read  
+**Run ID:** {run_id}  
+**Generated:** {timestamp.strftime('%Y-%m-%d %H:%M:%SZ')}
+
+---
+
+## Introduction
+
+This Learning post was created because the workflow could not complete a normal evidence-grounded medical publication during the current run. The agent is designed to prefer silence over fabrication, which means it will not turn weak, inaccessible, duplicate, or incomplete source material into a standard blog article just to keep the page populated. When that situation happens, the system now publishes a Learning-category entry instead of leaving the run outcome invisible.
+
+The goal of this fallback is operational transparency. It tells readers, reviewers, and maintainers that the agent did run, that the publishing pipeline still worked, and that the absence of a standard article reflects the evidence and retrieval conditions of the run rather than a silent failure. In other words, this post is not a substitute for a medical update; it is a traceable explanation of why a medical update was not produced.
+
+The immediate trigger for this specific Learning entry was: **{reason}**. That trigger can arise when recent source feeds do not yield enough usable material, when all candidates are duplicates of previously published posts, or when the source pages do not provide enough accessible content to support evidence-grounded writing.
+
+---
+
+## Background
+
+The normal workflow for this repository is intentionally strict. It starts by gathering recent source material, filters for clinically relevant and non-duplicate topics, researches the selected topics against accessible source content, validates the resulting article structure, verifies that the claims remain traceable, and only then publishes to the target blog tables. That structure is useful because it reduces the chance of publishing unsupported claims, thin rewrites, or duplicate updates that add little value for healthcare professionals.
+
+However, a strict workflow can create a visibility gap when nothing qualifies for publication. A run may succeed technically while still ending with no standard article because the available sources are too old, too similar to existing coverage, blocked by access controls, or too shallow to support the required content sections. Previously, that branch could leave the frontend with no new blog output even though the agent completed a legitimate review cycle.
+
+This new Learning fallback closes that gap. It keeps the category system active, documents the reason no standard article was published, and gives the team a durable record inside the same publishing channel. That makes the system easier to monitor because the absence of new medical content is now itself communicated as a deliberate, traceable outcome.
+
+---
+
+## Key Insights
+
+{detail_lines}
+
+- **Finding 1:** The absence of a publishable blog is sometimes the correct evidence-based outcome.
+- **Finding 2:** A transparent fallback is better than a silent empty state because it preserves auditability.
+- **Finding 3:** The Learning category can capture operational lessons without pretending that a missing medical article is equivalent to a verified clinical update.
+
+This fallback also reinforces an important product principle: users should be able to distinguish between "no new trustworthy article was available" and "the system failed without explanation." In editorial and healthcare contexts, those are very different states. A cautious system should expose that distinction clearly, especially when the pipeline intentionally rejects weak source material.
+
+For maintainers, the Learning post also acts as a compact debugging surface. If the run repeatedly creates Learning posts, that pattern suggests a need to review source freshness, duplicate logic, extraction quality, URL accessibility, or publishing thresholds. If the Learning posts appear only occasionally, the feature is doing its job by covering natural gaps in the news and evidence cycle.
+
+---
+
+## Impact on Healthcare Professionals
+
+For healthcare professionals reading the site, this category should set the right expectation: there was no new evidence-grounded article ready for publication in the current cycle. That is preferable to publishing speculative summaries, over-interpreted headlines, or content padded beyond what the source material actually supports. In clinical communication, restraint is often safer than output volume.
+
+For content reviewers and product owners, the Learning category creates a clear operational trail. It confirms that the system executed its review steps, that quality controls were respected, and that the lack of a standard post did not result from hidden inactivity. This is especially helpful when the system is monitored through the frontend alone, because the blog list can now show a meaningful fallback entry instead of an unexplained empty screen.
+
+For future workflow tuning, the Learning post offers a stable place to summarize what should be improved next. That may include widening source coverage, handling more feed edge cases, improving HTML extraction, or refining duplicate thresholds. The fallback therefore supports both user communication and iterative engineering without weakening the evidence standard for actual medical articles.
+
+---
+
+## Conclusion
+
+This Learning-category article exists to document a safe publishing decision: no standard blog was created because the current run did not yield enough trustworthy, non-duplicate, publishable material. The workflow still completed responsibly, and this post records that outcome in a visible way.
+
+Going forward, the agent should continue to prefer evidence integrity over forced output. When strong source material is available, the normal medical publishing path should resume. When it is not, the Learning category now provides a transparent fallback so that readers and maintainers can still understand what happened during the run.
+
+---
+
+**Sources:**  
+1. [AGENT workflow contract](AGENT.md)
+2. [Main workflow guide](docs/workflows/MAIN_WORKFLOW.md)
+3. [Run log mirror](logs/RUN_LOG.md)
+"""
+    return {
+        'category_name': LEARNING_CATEGORY_NAME,
+        'category_slug': LEARNING_CATEGORY_SLUG,
+        'title': title[:79],
+        'slug': slug,
+        'summary': summary[:300],
+        'content': content.strip(),
+        'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
+        'source_url': '',
+        'image_source_url': '',
+        'research': {
+            'references': references,
+            'evidence_grade': 'Moderate',
+            'confirmed_findings': confirmed_findings,
+        },
+    }
+
+
+def publish_learning_fallback(run_id, reason, details=None):
+    blog = build_learning_blog(run_id, reason, details=details)
+    valid, validation_reason = validate_blog(blog)
+    if not valid:
+        raise RuntimeError(f'learning fallback validation failed: {validation_reason}')
+    verified, verify_reason = verify_blog(blog)
+    if not verified:
+        raise RuntimeError(f'learning fallback verification failed: {verify_reason}')
+    blog_id = publish_blog(run_id, blog)
+    agent_db.safe_log_event(
+        run_id,
+        'learning_fallback',
+        'SUCCESS',
+        'Published Learning fallback blog.',
+        item_slug=blog['slug'],
+        details={'reason': reason, 'blog_id': blog_id, **(details or {})},
+    )
+    return {'blog_id': blog_id, **blog}
+
+
 def validate_blog(blog):
     required = ['title', 'slug', 'category_name', 'summary', 'content', 'keywords']
     for field in required:
@@ -939,17 +1093,36 @@ def run_workflow(recency_hours=24):
     run_id = agent_db.current_run_id('workflow')
     published = []
     memory_rollup = []
+    topic_failures = []
     agent_db.safe_log_event(run_id, 'runner', 'STARTED', 'Autonomous workflow started.', details={'backend': agent_db.database_backend()})
     try:
         ensure_publish_tables()
         agent_db.safe_log_event(run_id, 'database_init', 'SUCCESS', 'Verified operational and publish tables.')
         memory_rows = fetch_memory_context()
         agent_db.safe_log_event(run_id, 'memory_retrieval', 'SUCCESS', f'Retrieved {len(memory_rows)} memory rows.')
-        articles = fetch_recent_news(run_id, recency_hours=recency_hours)
+        news_error = ''
+        try:
+            articles = fetch_recent_news(run_id, recency_hours=recency_hours)
+        except Exception as exc:
+            news_error = str(exc)
+            articles = []
+            agent_db.safe_log_event(run_id, 'news_fetch', 'ERROR', news_error, details={'traceback': traceback.format_exc()})
         topics = select_topics(run_id, articles)
         if not topics:
             agent_db.safe_log_event(run_id, 'planner', 'INFO', 'No relevant non-duplicate topics this run.')
-            update_markdown_mirrors(run_id, [], [])
+            published.append(
+                publish_learning_fallback(
+                    run_id,
+                    'No blogs or source content were available for a standard publishable article in this run.',
+                    details={
+                        'article_count': len(articles),
+                        'selected_topic_count': 0,
+                        'news_error': news_error,
+                    },
+                )
+            )
+            update_markdown_mirrors(run_id, published, [])
+            agent_db.safe_log_event(run_id, 'run_complete', 'SUCCESS', f'Workflow completed with {len(published)} published blogs.')
             return 0
         for topic in topics:
             slug = topic['slug']
@@ -973,8 +1146,21 @@ def run_workflow(recency_hours=24):
                 published.append({'blog_id': blog_id, **blog})
                 memory_rollup.append({'slug': blog['slug'], 'facts': facts})
             except Exception as exc:
+                topic_failures.append({'slug': slug, 'reason': str(exc)})
                 agent_db.safe_log_event(run_id, 'topic_execution', 'ERROR', str(exc), item_slug=slug, details={'traceback': traceback.format_exc()})
                 continue
+        if not published:
+            published.append(
+                publish_learning_fallback(
+                    run_id,
+                    'All selected topics failed before publication, so a Learning fallback article was posted instead.',
+                    details={
+                        'article_count': len(articles),
+                        'selected_topic_count': len(topics),
+                        'topic_failures': topic_failures,
+                    },
+                )
+            )
         update_markdown_mirrors(run_id, published, memory_rollup)
         agent_db.safe_log_event(run_id, 'run_complete', 'SUCCESS', f'Workflow completed with {len(published)} published blogs.')
         return 0
