@@ -2,8 +2,11 @@
 import argparse
 import html
 import json
+import random
 import re
 import sys
+import tempfile
+import textwrap
 import traceback
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -30,6 +33,134 @@ MIN_CONTENT_WORDS = 700
 MAX_CONTENT_WORDS = 1200
 LEARNING_CATEGORY_NAME = 'Learning'
 LEARNING_CATEGORY_SLUG = 'learning'
+LEARNING_TOPIC_LIBRARY = [
+    {
+        'title': 'Learning Brief: Vaccine cold chain safety in everyday clinical practice',
+        'slug': 'learning-vaccine-cold-chain-safety',
+        'summary': 'A practical review of how vaccine cold chain discipline protects potency, reduces avoidable waste, and supports safe immunization delivery across clinics, pharmacies, and outreach programs.',
+        'focus': 'vaccine cold chain safety',
+        'background': 'Vaccines are biologic products whose effectiveness depends on careful temperature control from storage through administration. Even a short break in handling discipline can reduce potency, create uncertainty for vaccination teams, and complicate follow-up decisions for patients who expected reliable protection.',
+        'practice_gap': 'Many day-to-day failures do not come from dramatic refrigeration breakdowns. They come from preventable routine issues such as overcrowded units, missing temperature logs, delayed response to out-of-range readings, and poor separation of vaccines from food, staff beverages, or non-clinical supplies.',
+        'why_it_matters': 'For healthcare teams, cold chain quality is part of medication safety, quality assurance, and public trust. Strong processes help prevent missed opportunities, repeat doses, and uncertainty around whether a product remained usable throughout storage and transport.',
+        'key_points': [
+            'Store and transport vaccines using purpose-designed equipment, validated workflows, and continuous temperature monitoring rather than informal household-style practices.',
+            'Respond to temperature excursions with documented quarantine, supervisor review, and product-specific guidance instead of guessing whether stock remains acceptable.',
+            'Train every staff member who handles vaccines so that receiving, storage, transport, and administration all follow the same safety expectations.',
+        ],
+        'professional_actions': 'Review storage policies, check alarm escalation paths, audit temperature logs, and confirm that contingency plans exist for transport failures or power interruptions.',
+        'system_impact': 'Reliable cold chain practice improves patient confidence in immunization programs and supports operational readiness during high-demand campaigns, school programs, and community outreach clinics.',
+        'keywords': ['learning', 'vaccine-storage', 'cold-chain', 'immunization', 'patient-safety'],
+        'references': [
+            {'name': 'WHO vaccine management handbook', 'url': 'https://www.who.int/publications/i/item/WHO-IVB-15.01'},
+            {'name': 'CDC vaccine storage and handling toolkit', 'url': 'https://www.cdc.gov/vaccines/hcp/admin/storage/toolkit/index.html'},
+        ],
+    },
+    {
+        'title': 'Learning Brief: Antimicrobial stewardship in outpatient care',
+        'slug': 'learning-antimicrobial-stewardship-outpatient-care',
+        'summary': 'An evergreen learning blog on how outpatient antimicrobial stewardship improves prescribing quality, reduces resistance pressure, and protects patients from avoidable adverse effects.',
+        'focus': 'outpatient antimicrobial stewardship',
+        'background': 'Antibiotics remain essential for treating bacterial infections, but they also create risk when they are prescribed unnecessarily, selected too broadly, or continued longer than needed. In ambulatory settings, small habits repeated across many visits can meaningfully influence resistance patterns, patient expectations, and medication safety.',
+        'practice_gap': 'Outpatient stewardship challenges often include diagnostic uncertainty, patient pressure for immediate treatment, limited follow-up visibility, and variability in documentation. These factors can push clinicians toward broader or faster prescribing even when watchful waiting, supportive care, or narrower therapy would better match the evidence.',
+        'why_it_matters': 'Good stewardship does not mean avoiding antibiotics when they are indicated. It means choosing the right drug, dose, route, and duration for the right patient while explaining the plan clearly enough that adherence and safety are preserved.',
+        'key_points': [
+            'Use diagnosis-specific prescribing expectations so respiratory, urinary, skin, and dental complaints are managed with more consistent evidence-based thresholds.',
+            'Pair prescribing review with patient communication tools that explain why an antibiotic may not help viral illness and when reassessment is needed.',
+            'Track simple quality measures such as broad-spectrum antibiotic use, duration outliers, and return visits linked to common syndromes.',
+        ],
+        'professional_actions': 'Combine local prescribing data, peer feedback, delayed prescribing strategies where appropriate, and clear follow-up instructions to support safer decisions.',
+        'system_impact': 'Better outpatient stewardship reduces avoidable adverse drug events, lowers resistance pressure, and helps preserve antibiotic effectiveness for patients who genuinely need treatment.',
+        'keywords': ['learning', 'antimicrobial-stewardship', 'outpatient-care', 'antibiotic-safety', 'resistance'],
+        'references': [
+            {'name': 'CDC core elements of outpatient antibiotic stewardship', 'url': 'https://www.cdc.gov/antibiotic-use/core-elements/outpatient.html'},
+            {'name': 'WHO antimicrobial resistance fact sheet', 'url': 'https://www.who.int/news-room/fact-sheets/detail/antimicrobial-resistance'},
+        ],
+    },
+    {
+        'title': 'Learning Brief: Hand hygiene moments that reduce healthcare-associated infection',
+        'slug': 'learning-hand-hygiene-healthcare-associated-infection',
+        'summary': 'A healthcare learning post on why hand hygiene still matters, where compliance fails in busy care settings, and how teams can reinforce safer patient-contact habits.',
+        'focus': 'hand hygiene in clinical care',
+        'background': 'Hand hygiene remains one of the most foundational infection prevention measures in healthcare, yet it is also one of the easiest steps to erode under workload pressure. Because hands connect patients, equipment, medications, documentation surfaces, and shared spaces, inconsistent technique can contribute to avoidable transmission across the care environment.',
+        'practice_gap': 'The challenge is rarely a lack of awareness alone. Missed opportunities often reflect workflow friction, poorly placed supplies, competing tasks during handoffs, and normalization of small shortcuts that feel harmless in the moment but accumulate across a shift.',
+        'why_it_matters': 'Improving compliance depends on turning hand hygiene into a reliable system behavior rather than a purely individual reminder. Teams do better when product placement, culture, observation, and leadership expectations all support the same message.',
+        'key_points': [
+            'Reinforce the moments before patient contact, before aseptic tasks, after body fluid exposure risk, after patient contact, and after contact with patient surroundings.',
+            'Use direct observation, coaching, and accessible alcohol-based hand rub placement to reduce the gap between policy and real workflow.',
+            'Link hand hygiene improvement to broader infection prevention goals such as device safety, environmental cleaning, and isolation adherence.',
+        ],
+        'professional_actions': 'Review supply placement, involve unit champions, and give teams feedback that is specific enough to improve behavior rather than merely measure failure.',
+        'system_impact': 'Consistent hand hygiene supports safer admissions, safer procedures, and lower healthcare-associated infection risk for patients and staff across settings.',
+        'keywords': ['learning', 'hand-hygiene', 'infection-prevention', 'patient-safety', 'healthcare-quality'],
+        'references': [
+            {'name': 'WHO My 5 Moments for Hand Hygiene', 'url': 'https://www.who.int/publications/m/item/my-5-moments-for-hand-hygiene'},
+            {'name': 'CDC hand hygiene in healthcare settings', 'url': 'https://www.cdc.gov/handhygiene/index.html'},
+        ],
+    },
+    {
+        'title': 'Learning Brief: Recognizing stroke symptoms and urgent referral pathways',
+        'slug': 'learning-stroke-symptoms-urgent-referral',
+        'summary': 'A focused learning article on rapid stroke recognition, the value of time-sensitive escalation, and how frontline teams can reduce delay to emergency evaluation.',
+        'focus': 'early stroke recognition and referral',
+        'background': 'Stroke care depends heavily on time. Delays in recognizing focal neurologic deficits or activating emergency pathways can narrow treatment options and worsen patient outcomes. Because many first contacts occur outside specialist settings, every clinician and triage team benefits from a shared mental model for urgent recognition.',
+        'practice_gap': 'Missed or delayed escalation can happen when symptoms fluctuate, patients present atypically, communication is unclear, or teams underestimate the significance of transient deficits. Education therefore needs to focus on action thresholds, not only on memorizing symptom lists.',
+        'why_it_matters': 'Rapid referral does not require every frontline team to make a definitive stroke subtype diagnosis. It requires recognizing that sudden neurologic change deserves immediate emergency evaluation and coordinated transfer without avoidable administrative delay.',
+        'key_points': [
+            'Teach sudden facial droop, arm weakness, speech difficulty, visual change, severe imbalance, or abrupt neurologic deficit as escalation triggers rather than symptoms to watch casually.',
+            'Use local emergency pathways that minimize handoff confusion, document time last known well, and align transport decisions with stroke-ready services.',
+            'Reinforce that transient symptoms may still reflect a high-risk vascular event and should not be dismissed because they partially improve.',
+        ],
+        'professional_actions': 'Standardize triage prompts, rehearse transfer communication, and educate teams to capture onset timing, medication context, and baseline neurologic function quickly.',
+        'system_impact': 'Earlier recognition and referral improve the chance that eligible patients can receive time-sensitive treatment and specialist assessment with fewer preventable delays.',
+        'keywords': ['learning', 'stroke-recognition', 'urgent-referral', 'neurology', 'emergency-care'],
+        'references': [
+            {'name': 'NINDS stroke information', 'url': 'https://www.ninds.nih.gov/health-information/disorders/stroke'},
+            {'name': 'CDC stroke signs and symptoms', 'url': 'https://www.cdc.gov/stroke/signs_symptoms.htm'},
+        ],
+    },
+    {
+        'title': 'Learning Brief: Diabetes foot care and ulcer prevention',
+        'slug': 'learning-diabetes-foot-care-ulcer-prevention',
+        'summary': 'A practical educational blog on routine diabetic foot care, early risk detection, and why consistent prevention work matters before ulcers or infections develop.',
+        'focus': 'diabetes foot care prevention',
+        'background': 'Foot complications in diabetes can emerge gradually through neuropathy, vascular compromise, pressure injury, and delayed recognition of minor trauma. By the time a visible wound becomes serious, the upstream opportunities for prevention may have already been missed in routine care and patient self-management.',
+        'practice_gap': 'Preventive foot care is often overshadowed by glucose metrics, medication changes, and urgent symptom management. As a result, footwear review, skin inspection, sensory assessment, and self-care coaching may receive less attention than their long-term impact deserves.',
+        'why_it_matters': 'Consistent prevention helps reduce ulcer risk, avoid infection, and preserve mobility. It also gives clinicians a practical way to convert chronic disease follow-up visits into opportunities for complication prevention rather than late-stage rescue.',
+        'key_points': [
+            'Encourage regular inspection of feet and footwear, especially for patients with neuropathy who may not feel friction, heat, or early skin damage.',
+            'Escalate concern quickly when redness, drainage, swelling, new pain, callus breakdown, or non-healing skin changes appear.',
+            'Integrate foot care teaching into chronic disease review so prevention is repeated consistently rather than addressed only after injury occurs.',
+        ],
+        'professional_actions': 'Use structured diabetic foot checks, document risk level, reinforce footwear guidance, and coordinate podiatry or wound referral when early warning signs appear.',
+        'system_impact': 'Early preventive care can reduce avoidable ulceration, lower hospitalization risk, and improve long-term function for people living with diabetes.',
+        'keywords': ['learning', 'diabetes-foot-care', 'ulcer-prevention', 'chronic-disease', 'patient-education'],
+        'references': [
+            {'name': 'CDC diabetes and foot health', 'url': 'https://www.cdc.gov/diabetes/diabetes-complications/diabetes-and-your-feet.html'},
+            {'name': 'NIDDK diabetic foot problems', 'url': 'https://www.niddk.nih.gov/health-information/diabetes/overview/preventing-problems/foot-problems'},
+        ],
+    },
+    {
+        'title': 'Learning Brief: Preventing dehydration and heat illness in vulnerable adults',
+        'slug': 'learning-dehydration-heat-illness-vulnerable-adults',
+        'summary': 'An educational post on preventing dehydration and heat-related illness in older adults and other high-risk groups during hot weather, illness, or limited access to cooling.',
+        'focus': 'dehydration and heat illness prevention',
+        'background': 'Heat-related illness is shaped by more than outdoor temperature alone. Age, chronic disease, medication effects, mobility limitations, social isolation, housing conditions, and reduced thirst response can all increase the risk that dehydration or heat stress will develop before warning signs are recognized.',
+        'practice_gap': 'Prevention can fail when teams assume patients will self-identify risk, maintain adequate fluid intake, or notice early symptoms without support. Vulnerable adults may need proactive counseling and follow-up long before extreme heat becomes an emergency department problem.',
+        'why_it_matters': 'Heat illness prevention is part of seasonal preparedness, chronic disease management, and community risk reduction. Simple anticipatory advice can help patients and caregivers identify risk earlier and take protective steps before symptoms escalate.',
+        'key_points': [
+            'Identify patients at higher risk because of age, frailty, diuretic use, cardiovascular disease, renal disease, mental illness, or reduced access to cool environments.',
+            'Teach practical prevention steps such as planned hydration, checking indoor heat exposure, lighter clothing, caregiver monitoring, and early response to dizziness or confusion.',
+            'Include heat risk in outreach planning so clinics and community services can reinforce prevention during seasonal spikes and local alerts.',
+        ],
+        'professional_actions': 'Incorporate heat counseling into medication review, discharge planning, home health communication, and seasonal community messaging.',
+        'system_impact': 'Earlier prevention can reduce avoidable emergency visits, protect high-risk patients during heat events, and strengthen public health resilience during climate-related stress.',
+        'keywords': ['learning', 'heat-illness', 'dehydration', 'older-adults', 'public-health'],
+        'references': [
+            {'name': 'CDC heat and health', 'url': 'https://www.cdc.gov/heat-health/index.html'},
+            {'name': 'WHO climate change and health', 'url': 'https://www.who.int/news-room/fact-sheets/detail/climate-change-and-health'},
+        ],
+    },
+]
 
 
 @dataclass
@@ -449,10 +580,72 @@ def join_sentences(parts):
     return re.sub(r'\s+', ' ', text).strip()
 
 
+def clean_blog_title(title, max_length=180):
+    text = re.sub(r'\s+', ' ', str(title or '').strip())
+    if len(text) <= max_length:
+        return text
+    truncated = text[: max_length + 1].rsplit(' ', 1)[0].strip()
+    if not truncated:
+        truncated = text[:max_length].strip()
+    return truncated.rstrip(' ,;:-') + '…'
+
+
+def create_learning_cover_image(blog):
+    title = clean_blog_title(blog.get('title') or 'Learning Brief', max_length=90)
+    summary = re.sub(r'\s+', ' ', str(blog.get('summary') or '').strip())
+    summary_lines = textwrap.wrap(summary, width=42)[:3] or ['Evidence-based health learning content']
+    title_lines = textwrap.wrap(title, width=24)[:3] or ['Learning Brief']
+    lines = []
+    for index, line in enumerate(title_lines):
+        lines.append(
+            f'<text x="96" y="{250 + index * 92}" fill="#F8FAFC" font-size="64" font-weight="700" '
+            f'font-family="Arial, Helvetica, sans-serif">{html.escape(line)}</text>'
+        )
+    for index, line in enumerate(summary_lines):
+        lines.append(
+            f'<text x="96" y="{600 + index * 44}" fill="#D6E4FF" font-size="28" font-weight="400" '
+            f'font-family="Arial, Helvetica, sans-serif">{html.escape(line)}</text>'
+        )
+    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+  <title>{html.escape(title)}</title>
+  <desc>{html.escape(summary)}</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="55%" stop-color="#1D4ED8"/>
+      <stop offset="100%" stop-color="#0EA5A4"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#bg)" rx="36"/>
+  <circle cx="1330" cy="170" r="170" fill="#93C5FD" opacity="0.18"/>
+  <circle cx="1450" cy="720" r="220" fill="#67E8F9" opacity="0.16"/>
+  <rect x="96" y="92" width="246" height="64" rx="32" fill="#DCFCE7" opacity="0.96"/>
+  <text x="138" y="134" fill="#166534" font-size="30" font-weight="700" font-family="Arial, Helvetica, sans-serif">Learning</text>
+  <text x="96" y="196" fill="#BFDBFE" font-size="30" font-weight="500" font-family="Arial, Helvetica, sans-serif">Health education fallback article</text>
+  {''.join(lines)}
+  <text x="96" y="790" fill="#E2E8F0" font-size="24" font-weight="500" font-family="Arial, Helvetica, sans-serif">Global Health Intelligence Agent</text>
+</svg>'''
+    handle = tempfile.NamedTemporaryFile('w', encoding='utf-8', suffix='.svg', prefix=f"{blog.get('slug') or 'learning'}-", delete=False)
+    try:
+        handle.write(svg)
+        return handle.name
+    finally:
+        handle.close()
+
+
+def cleanup_generated_file(path_value):
+    if not path_value:
+        return
+    try:
+        Path(path_value).unlink(missing_ok=True)
+    except OSError:
+        return
+
+
 def build_blog_from_research(research):
     topic = research['topic']
     article = topic['article']
-    title = topic['article'].title.strip()
+    title = clean_blog_title(topic['article'].title)
     category_name = topic['category_name']
     slug = topic['slug']
     intro = [
@@ -540,7 +733,7 @@ Teams should continue to align decisions with official guidance, local epidemiol
     return {
         'category_name': category_name,
         'category_slug': topic['category_slug'],
-        'title': title[:79],
+        'title': title,
         'slug': slug,
         'summary': summary[:300],
         'content': content.strip(),
@@ -577,53 +770,59 @@ def _learning_detail_lines(details=None):
     lines = []
     article_count = details.get('article_count')
     if article_count is not None:
-        lines.append(f"- Candidate articles reviewed in this run: **{int(article_count)}**.")
+        lines.append(f"- Candidate health news items reviewed this run: **{int(article_count)}**.")
     selected_topic_count = details.get('selected_topic_count')
     if selected_topic_count is not None:
-        lines.append(f"- Topics selected for deeper work: **{int(selected_topic_count)}**.")
+        lines.append(f"- Standard news topics selected before fallback: **{int(selected_topic_count)}**.")
     news_error = str(details.get('news_error') or '').strip()
     if news_error:
-        lines.append(f"- News retrieval issue recorded during this run: `{news_error}`.")
+        lines.append(f"- Feed or retrieval issue observed: `{news_error}`.")
     for failure in (details.get('topic_failures') or [])[:3]:
         slug = str(failure.get('slug') or 'topic').strip()
         reason = str(failure.get('reason') or 'no detailed reason recorded').strip()
-        lines.append(f"- Topic `{slug}` could not be published because **{reason}**.")
-    return '\n'.join(lines) or '- The workflow captured no additional diagnostics beyond the absence of publishable material.'
+        lines.append(f"- Standard topic `{slug}` could not be published because **{reason}**.")
+    return '\n'.join(lines) or '- No additional run diagnostics were required beyond the fallback trigger.'
+
+
+def _learning_topic_candidates(run_id, reason):
+    candidates = [dict(topic) for topic in LEARNING_TOPIC_LIBRARY]
+    random.Random(f'{run_id}:{reason}').shuffle(candidates)
+    return candidates
+
+
+def select_learning_topic(run_id, reason, details=None):
+    candidates = _learning_topic_candidates(run_id, reason)
+    first_topic = candidates[0] if candidates else None
+    for topic in candidates:
+        source_url = (topic.get('references') or [{}])[0].get('url', '')
+        duplicate, _reason = duplicate_exists(topic['slug'], source_url)
+        if not duplicate:
+            topic['source_url'] = source_url
+            return topic
+    if not first_topic:
+        raise RuntimeError('learning topic library is empty')
+    fallback = dict(first_topic)
+    fallback['title'] = f"{first_topic['title']}: refresher"
+    fallback['slug'] = slugify(f"{first_topic['slug']}-{run_id}")
+    fallback['source_url'] = ''
+    fallback['keywords'] = list(dict.fromkeys(list(first_topic.get('keywords') or []) + ['learning-refresher']))[:8]
+    return fallback
 
 
 def build_learning_blog(run_id, reason, details=None):
     timestamp = now_utc()
-    title = 'Learning update: no publishable blog was available in this run'
-    slug = slugify(f'learning-update-{run_id}')
-    summary = (
-        'No evidence-grounded, non-duplicate blog could be published in this workflow run, '
-        'so the agent created a Learning-category post that explains what happened and what to review next.'
-    )
+    topic = select_learning_topic(run_id, reason, details=details)
+    title = clean_blog_title(topic['title'])
+    summary = topic['summary']
     detail_lines = _learning_detail_lines(details)
-    confirmed_findings = [
-        {
-            'claim': 'The workflow did not find enough reliable, publishable material to issue a standard medical news article in this run.',
-            'confidence': 'Moderate',
-        },
-        {
-            'claim': 'Instead of inventing unsupported claims, the system preserved its evidence threshold and recorded the gap transparently.',
-            'confidence': 'High',
-        },
-        {
-            'claim': 'A Learning-category post was generated so the frontend and publishing pipeline still communicate the workflow outcome clearly.',
-            'confidence': 'High',
-        },
-    ]
-    references = [
-        {'name': 'AGENT workflow contract', 'url': 'AGENT.md'},
-        {'name': 'Main workflow guide', 'url': 'docs/workflows/MAIN_WORKFLOW.md'},
-        {'name': 'Run log mirror', 'url': 'logs/RUN_LOG.md'},
-    ]
+    references = topic['references']
+    key_insights = '\n'.join(f"- **Insight {index}:** {point}" for index, point in enumerate(topic['key_points'], start=1))
+    sources_block = '\n'.join(f"{index}. [{reference['name']}]({reference['url']})" for index, reference in enumerate(references, start=1))
     content = f"""# {title}
 
 **Published by:** Global Health Intelligence Agent  
 **Category:** {LEARNING_CATEGORY_NAME}  
-**Reading Time:** ~4 min read  
+**Reading Time:** ~5 min read  
 **Run ID:** {run_id}  
 **Generated:** {timestamp.strftime('%Y-%m-%d %H:%M:%SZ')}
 
@@ -631,70 +830,54 @@ def build_learning_blog(run_id, reason, details=None):
 
 ## Introduction
 
-This Learning post was created because the workflow could not complete a normal evidence-grounded medical publication during the current run. The agent is designed to prefer silence over fabrication, which means it will not turn weak, inaccessible, duplicate, or incomplete source material into a standard blog article just to keep the page populated. When that situation happens, the system now publishes a Learning-category entry instead of leaving the run outcome invisible.
+This Learning article was created because the workflow did not find a standard publishable news blog for this run, so it selected a real evergreen health topic instead of showing an empty result. For this cycle, the topic chosen was **{topic['focus']}**, a subject that remains relevant to clinicians, educators, and care teams even when the news pipeline does not yield a strong evidence-grounded breaking update.
 
-The goal of this fallback is operational transparency. It tells readers, reviewers, and maintainers that the agent did run, that the publishing pipeline still worked, and that the absence of a standard article reflects the evidence and retrieval conditions of the run rather than a silent failure. In other words, this post is not a substitute for a medical update; it is a traceable explanation of why a medical update was not produced.
-
-The immediate trigger for this specific Learning entry was: **{reason}**. That trigger can arise when recent source feeds do not yield enough usable material, when all candidates are duplicates of previously published posts, or when the source pages do not provide enough accessible content to support evidence-grounded writing.
-
----
+{topic['background']} {topic['why_it_matters']} That makes this type of fallback useful for the site: readers still receive practical, health-related educational content, and the publishing flow remains active without lowering the quality bar for current-news articles.
 
 ## Background
 
-The normal workflow for this repository is intentionally strict. It starts by gathering recent source material, filters for clinically relevant and non-duplicate topics, researches the selected topics against accessible source content, validates the resulting article structure, verifies that the claims remain traceable, and only then publishes to the target blog tables. That structure is useful because it reduces the chance of publishing unsupported claims, thin rewrites, or duplicate updates that add little value for healthcare professionals.
+{topic['practice_gap']} In many organizations, these gaps do not look dramatic in isolation. They appear as small inconsistencies in routine work, documentation, escalation, patient counseling, or team communication. Over time, however, those inconsistencies can influence safety, efficiency, and the ability of professionals to respond confidently when clinical demands increase.
 
-However, a strict workflow can create a visibility gap when nothing qualifies for publication. A run may succeed technically while still ending with no standard article because the available sources are too old, too similar to existing coverage, blocked by access controls, or too shallow to support the required content sections. Previously, that branch could leave the frontend with no new blog output even though the agent completed a legitimate review cycle.
-
-This new Learning fallback closes that gap. It keeps the category system active, documents the reason no standard article was published, and gives the team a durable record inside the same publishing channel. That makes the system easier to monitor because the absence of new medical content is now itself communicated as a deliberate, traceable outcome.
-
----
+Evergreen learning content is valuable precisely because it focuses on fundamentals that should remain useful beyond a single headline or news cycle. When teams revisit core topics like {topic['focus']}, they strengthen baseline practice, sharpen patient education, and reduce the chance that preventable process failures turn into avoidable complications. In that sense, learning content is not filler; it is a practical reinforcement tool for daily care delivery.
 
 ## Key Insights
 
+{key_insights}
+
 {detail_lines}
 
-- **Finding 1:** The absence of a publishable blog is sometimes the correct evidence-based outcome.
-- **Finding 2:** A transparent fallback is better than a silent empty state because it preserves auditability.
-- **Finding 3:** The Learning category can capture operational lessons without pretending that a missing medical article is equivalent to a verified clinical update.
-
-This fallback also reinforces an important product principle: users should be able to distinguish between "no new trustworthy article was available" and "the system failed without explanation." In editorial and healthcare contexts, those are very different states. A cautious system should expose that distinction clearly, especially when the pipeline intentionally rejects weak source material.
-
-For maintainers, the Learning post also acts as a compact debugging surface. If the run repeatedly creates Learning posts, that pattern suggests a need to review source freshness, duplicate logic, extraction quality, URL accessibility, or publishing thresholds. If the Learning posts appear only occasionally, the feature is doing its job by covering natural gaps in the news and evidence cycle.
-
----
+These insights matter because effective healthcare work depends on repeatable basics as much as on high-profile clinical breakthroughs. A good learning brief should help professionals reconnect routine practice with safety outcomes, policy expectations, and patient trust. It should also be clear enough to support team discussion, local process review, or patient counseling without requiring a reader to decode highly technical research language first.
 
 ## Impact on Healthcare Professionals
 
-For healthcare professionals reading the site, this category should set the right expectation: there was no new evidence-grounded article ready for publication in the current cycle. That is preferable to publishing speculative summaries, over-interpreted headlines, or content padded beyond what the source material actually supports. In clinical communication, restraint is often safer than output volume.
+For healthcare professionals, the immediate value of this topic is practical application. {topic['professional_actions']} Those actions are most effective when they are built into ordinary workflows rather than treated as optional reminders that compete with every other task in a busy clinical day.
 
-For content reviewers and product owners, the Learning category creates a clear operational trail. It confirms that the system executed its review steps, that quality controls were respected, and that the lack of a standard post did not result from hidden inactivity. This is especially helpful when the system is monitored through the frontend alone, because the blog list can now show a meaningful fallback entry instead of an unexplained empty screen.
-
-For future workflow tuning, the Learning post offers a stable place to summarize what should be improved next. That may include widening source coverage, handling more feed edge cases, improving HTML extraction, or refining duplicate thresholds. The fallback therefore supports both user communication and iterative engineering without weakening the evidence standard for actual medical articles.
-
----
+{topic['system_impact']} Educational posts in the Learning category are therefore meant to support readiness, not merely background reading. When no strong current-news article is ready to publish, a carefully chosen learning topic can still help clinicians, pharmacists, nurses, administrators, and public health teams reinforce important habits that affect real-world care quality.
 
 ## Conclusion
 
-This Learning-category article exists to document a safe publishing decision: no standard blog was created because the current run did not yield enough trustworthy, non-duplicate, publishable material. The workflow still completed responsibly, and this post records that outcome in a visible way.
+This run did not produce a standard news-based blog, but it still produced a useful health education article by selecting a random evergreen learning topic with continuing professional relevance. In this case, the focus was **{topic['focus']}**, a subject that rewards repeated review because safe practice depends on consistent execution as much as on awareness.
 
-Going forward, the agent should continue to prefer evidence integrity over forced output. When strong source material is available, the normal medical publishing path should resume. When it is not, the Learning category now provides a transparent fallback so that readers and maintainers can still understand what happened during the run.
+The Learning category should now serve as a reliable fallback path: when breaking-news publication is not possible, the system can still publish a meaningful health-related blog that teaches something practical, remains relevant beyond the current day, and keeps the frontend populated with useful content rather than operational-only status messages.
 
 ---
 
 **Sources:**  
-1. [AGENT workflow contract](AGENT.md)
-2. [Main workflow guide](docs/workflows/MAIN_WORKFLOW.md)
-3. [Run log mirror](logs/RUN_LOG.md)
+{sources_block}
 """
+    confirmed_findings = [
+        {'claim': point, 'confidence': 'Moderate'}
+        for point in topic['key_points']
+    ]
     return {
         'category_name': LEARNING_CATEGORY_NAME,
         'category_slug': LEARNING_CATEGORY_SLUG,
-        'title': title[:79],
-        'slug': slug,
+        'title': title,
+        'slug': topic['slug'],
         'summary': summary[:300],
         'content': content.strip(),
-        'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
-        'source_url': '',
+        'keywords': list(topic['keywords'])[:8],
+        'source_url': topic.get('source_url', ''),
         'image_source_url': '',
         'research': {
             'references': references,
@@ -712,16 +895,21 @@ def publish_learning_fallback(run_id, reason, details=None):
     verified, verify_reason = verify_blog(blog)
     if not verified:
         raise RuntimeError(f'learning fallback verification failed: {verify_reason}')
-    blog_id = publish_blog(run_id, blog)
-    agent_db.safe_log_event(
-        run_id,
-        'learning_fallback',
-        'SUCCESS',
-        'Published Learning fallback blog.',
-        item_slug=blog['slug'],
-        details={'reason': reason, 'blog_id': blog_id, **(details or {})},
-    )
-    return {'blog_id': blog_id, **blog}
+    generated_image_path = create_learning_cover_image(blog)
+    blog['image_source_url'] = generated_image_path
+    try:
+        blog_id = publish_blog(run_id, blog)
+        agent_db.safe_log_event(
+            run_id,
+            'learning_fallback',
+            'SUCCESS',
+            'Published Learning fallback blog.',
+            item_slug=blog['slug'],
+            details={'reason': reason, 'blog_id': blog_id, **(details or {})},
+        )
+        return {'blog_id': blog_id, **blog}
+    finally:
+        cleanup_generated_file(generated_image_path)
 
 
 def validate_blog(blog):
@@ -959,15 +1147,16 @@ def publish_blog(run_id, blog):
                 }
             )
         except Exception as exc:
+            fallback_image_url = blog.get('image_source_url') if re.match(r'^https?://', str(blog.get('image_source_url') or ''), re.IGNORECASE) else None
             agent_db.safe_log_event(
                 run_id,
                 'publisher',
                 'WARN',
                 f'Image upload failed; using source image URL directly: {exc}',
                 item_slug=blog['slug'],
-                details={'image_source_url': blog.get('image_source_url')},
+                details={'image_source_url': blog.get('image_source_url'), 'fallback_image_url': fallback_image_url},
             )
-            published_file_url = blog.get('image_source_url')
+            published_file_url = fallback_image_url
     stored_file_value = agent_db.blog_master_file_db_value(published_file_url)
     db = agent_db.publish_db_name()
     columns = agent_db._table_columns(db, 'blog_master')
