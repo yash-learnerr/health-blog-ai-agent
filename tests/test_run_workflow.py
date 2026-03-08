@@ -1,4 +1,5 @@
 import importlib.util
+import tempfile
 import unittest
 from unittest import mock
 from pathlib import Path
@@ -394,30 +395,163 @@ class RunWorkflowTests(unittest.TestCase):
         self.assertEqual(captured['publish_db'], 'publish_db')
 
     def test_build_learning_blog_passes_validation_and_verification(self):
-        blog = mod.build_learning_blog(
-            'workflow-20260308T000000Z-test',
-            'No blogs were available for publication.',
-            details={'article_count': 0, 'selected_topic_count': 0, 'news_error': 'all feeds empty'},
-        )
+        topic = dict(next(item for item in mod.LEARNING_TOPIC_LIBRARY if item['slug'] == 'learning-hand-hygiene-healthcare-associated-infection'))
+        topic['source_url'] = topic['references'][0]['url']
+        with mock.patch.object(mod, 'select_learning_topic', return_value=topic), \
+             mock.patch.object(mod, 'duplicate_exists', return_value=(False, '')):
+            blog = mod.build_learning_blog(
+                'workflow-20260308T000000Z-test',
+                'No blogs were available for publication.',
+                details={'article_count': 0, 'selected_topic_count': 0, 'news_error': 'all feeds empty'},
+            )
 
-        valid, validation_reason = mod.validate_blog(blog)
-        self.assertTrue(valid, validation_reason)
-        with mock.patch.object(mod, 'duplicate_exists', return_value=(False, '')):
+            valid, validation_reason = mod.validate_blog(blog)
+            self.assertTrue(valid, validation_reason)
             verified, verify_reason = mod.verify_blog(blog)
+
         self.assertTrue(verified, verify_reason)
         self.assertEqual(blog['category_name'], 'Learning')
-        self.assertIn('learning-update', blog['slug'])
+        self.assertEqual(blog['title'], topic['title'])
+        self.assertTrue(blog['slug'].startswith('learning-'))
+        self.assertGreaterEqual(len(blog['research']['references']), 2)
+        self.assertIn('evergreen health topic', blog['content'])
+
+    def test_create_learning_cover_image_writes_svg_file(self):
+        blog = {
+            'slug': 'learning-cover-test',
+            'title': 'Learning Brief: Preventing dehydration and heat illness in vulnerable adults',
+            'summary': 'An educational post on preventing dehydration and heat-related illness in older adults and other high-risk groups.',
+        }
+
+        image_path = mod.create_learning_cover_image(blog)
+        try:
+            self.assertTrue(Path(image_path).is_file())
+            text = Path(image_path).read_text(encoding='utf-8')
+            self.assertIn('<svg', text)
+            self.assertIn('Learning', text)
+            self.assertIn('Preventing dehydration', text)
+        finally:
+            mod.cleanup_generated_file(image_path)
+
+    def test_select_learning_topic_skips_duplicate_topic_when_possible(self):
+        first_slug = mod._learning_topic_candidates('run-42', 'fallback reason')[0]['slug']
+
+        def fake_duplicate_exists(slug, source_url):
+            return (slug == first_slug, 'slug match' if slug == first_slug else '')
+
+        with mock.patch.object(mod, 'duplicate_exists', side_effect=fake_duplicate_exists):
+            topic = mod.select_learning_topic('run-42', 'fallback reason')
+
+        self.assertNotEqual(topic['slug'], first_slug)
+        self.assertTrue(topic['source_url'].startswith('https://'))
+
+    def test_select_learning_topic_uses_refresher_slug_when_all_topics_are_duplicates(self):
+        with mock.patch.object(mod, 'duplicate_exists', return_value=(True, 'slug match')):
+            topic = mod.select_learning_topic('run-99', 'fallback reason')
+
+        self.assertIn('refresher', topic['title'].lower())
+        self.assertIn('run-99', topic['slug'])
+        self.assertEqual(topic['source_url'], '')
+
+    def test_publish_learning_fallback_attaches_generated_image_and_cleans_it_up(self):
+        temp_image = tempfile.NamedTemporaryFile(delete=False, suffix='.svg')
+        temp_image.write(b'<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+        temp_image.close()
+        blog = {
+            'category_name': 'Learning',
+            'category_slug': 'learning',
+            'title': 'Learning Brief: Antimicrobial stewardship in outpatient care',
+            'slug': 'learning-antimicrobial-stewardship-outpatient-care',
+            'summary': 'Summary',
+            'content': '## Introduction\n\nBody\n\n## Background\n\nBody\n\n## Key Insights\n\nBody\n\n## Impact on Healthcare Professionals\n\nBody\n\n## Conclusion\n\nBody\n\n**Sources:**\n1. Ref\n2. Ref',
+            'keywords': ['learning', 'antimicrobial-stewardship', 'outpatient-care', 'antibiotic-safety', 'resistance'],
+            'source_url': 'https://www.cdc.gov/antibiotic-use/core-elements/outpatient.html',
+            'image_source_url': '',
+            'research': {'references': [{'name': 'A', 'url': 'https://example.com/a'}, {'name': 'B', 'url': 'https://example.com/b'}], 'evidence_grade': 'Moderate', 'confirmed_findings': []},
+        }
+        captured = {}
+
+        def fake_publish_blog(run_id, incoming_blog):
+            captured['image_source_url'] = incoming_blog['image_source_url']
+            return 901
+
+        with mock.patch.object(mod, 'build_learning_blog', return_value=dict(blog)), \
+             mock.patch.object(mod, 'validate_blog', return_value=(True, '')), \
+             mock.patch.object(mod, 'verify_blog', return_value=(True, '')), \
+             mock.patch.object(mod, 'create_learning_cover_image', return_value=temp_image.name), \
+             mock.patch.object(mod, 'publish_blog', side_effect=fake_publish_blog), \
+             mock.patch.object(mod.agent_db, 'safe_log_event', return_value=True):
+            result = mod.publish_learning_fallback('run-cover', 'fallback reason')
+
+        self.assertEqual(result['blog_id'], 901)
+        self.assertEqual(captured['image_source_url'], temp_image.name)
+        self.assertFalse(Path(temp_image.name).exists())
+
+    def test_publish_blog_does_not_store_local_image_path_when_upload_fails(self):
+        temp_image = tempfile.NamedTemporaryFile(delete=False, suffix='.svg')
+        temp_image.write(b'<svg xmlns="http://www.w3.org/2000/svg"></svg>')
+        temp_image.close()
+        original_category_id_for = mod.category_id_for
+        original_upload_blog_image = mod.blog_file_manager.upload_blog_image
+        original_database_access = mod.agent_db.database_access
+        original_publish_db_name = mod.agent_db.publish_db_name
+        original_table_columns = mod.agent_db._table_columns
+        original_query_rows = mod.agent_db._query_rows
+        original_safe_log_event = mod.agent_db.safe_log_event
+
+        captured = {'logs': []}
+        mod.category_id_for = lambda blog: 9
+        mod.blog_file_manager.upload_blog_image = lambda blog: (_ for _ in ()).throw(RuntimeError('upload unavailable'))
+        mod.agent_db.database_access = lambda use_staging=None: 'local'
+        mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
+        mod.agent_db._table_columns = lambda db, table: {
+            'createdAt', 'updatedAt', 'category_id', 'blog_name', 'meta_title',
+            'description', 'meta_description', 'meta_tags', 'file', 'status', 'slug',
+        }
+        mod.agent_db.safe_log_event = lambda *args, **kwargs: captured['logs'].append((args, kwargs)) or True
+
+        def fake_query_rows(sql, expected_cols):
+            captured['sql'] = sql
+            return [['126']]
+
+        mod.agent_db._query_rows = fake_query_rows
+        try:
+            blog_id = mod.publish_blog(
+                'run-local-image',
+                {
+                    'slug': 'sample-local-image',
+                    'title': 'Sample title',
+                    'summary': 'Summary',
+                    'content': 'Body',
+                    'keywords': ['one', 'two', 'three', 'four', 'five'],
+                    'source_url': 'https://www.who.int/news/item/sample',
+                    'image_source_url': temp_image.name,
+                },
+            )
+        finally:
+            mod.category_id_for = original_category_id_for
+            mod.blog_file_manager.upload_blog_image = original_upload_blog_image
+            mod.agent_db.database_access = original_database_access
+            mod.agent_db.publish_db_name = original_publish_db_name
+            mod.agent_db._table_columns = original_table_columns
+            mod.agent_db._query_rows = original_query_rows
+            mod.agent_db.safe_log_event = original_safe_log_event
+            Path(temp_image.name).unlink(missing_ok=True)
+
+        self.assertEqual(blog_id, 126)
+        self.assertNotIn(temp_image.name, captured['sql'])
+        self.assertTrue(any(kwargs.get('details', {}).get('fallback_image_url') is None for _args, kwargs in captured['logs']))
 
     def test_run_workflow_publishes_learning_fallback_when_no_topics_found(self):
         captured = {}
         learning_blog = {
             'blog_id': 901,
-            'slug': 'learning-update-run-1',
-            'title': 'Learning fallback',
+            'slug': 'learning-vaccine-cold-chain-safety',
+            'title': 'Learning Brief: Vaccine cold chain safety in everyday clinical practice',
             'category_name': 'Learning',
             'summary': 'Summary',
             'content': 'Content',
-            'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
+            'keywords': ['learning', 'vaccine-storage', 'cold-chain', 'immunization', 'patient-safety'],
             'research': {'confirmed_findings': []},
         }
 
@@ -461,12 +595,12 @@ class RunWorkflowTests(unittest.TestCase):
         }
         learning_blog = {
             'blog_id': 902,
-            'slug': 'learning-update-run-2',
-            'title': 'Learning fallback',
+            'slug': 'learning-antimicrobial-stewardship-outpatient-care',
+            'title': 'Learning Brief: Antimicrobial stewardship in outpatient care',
             'category_name': 'Learning',
             'summary': 'Summary',
             'content': 'Content',
-            'keywords': ['learning', 'workflow', 'publishing', 'fallback', 'operations'],
+            'keywords': ['learning', 'antimicrobial-stewardship', 'outpatient-care', 'antibiotic-safety', 'resistance'],
             'research': {'confirmed_findings': []},
         }
         captured = {}
