@@ -83,6 +83,10 @@ If you are opening this repository for the first time, use this order:
 - **Duplicate protection:** Topics are cross-checked before publication.
 - **Structured outputs:** Prompts and templates keep the output consistent and production-ready.
 
+### Example time-saved calculation
+
+- Estimated hours saved per week: `45 x 7 / 60 = 5.25 hours/week`
+
 ---
 
 ## How It Works
