@@ -27,6 +27,28 @@ class AgentDbTests(unittest.TestCase):
         run_id = mod.current_run_id('dashboard')
         self.assertTrue(run_id.startswith('dashboard-'))
 
+    def test_load_env_strips_unquoted_inline_comments(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir, '.env')
+            env_path.write_text('AGENT_STORAGE_BACKEND=database # json, both\n', encoding='utf-8')
+            mod.load_env = self._original_load_env
+            mod.os.environ.pop('AGENT_STORAGE_BACKEND', None)
+
+            mod.load_env(str(env_path))
+
+        self.assertEqual(mod.os.environ['AGENT_STORAGE_BACKEND'], 'database')
+
+    def test_load_env_preserves_literal_hash_without_whitespace_comment_prefix(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            env_path = Path(temp_dir, '.env')
+            env_path.write_text('DB_PASSWORD=abc#123\n', encoding='utf-8')
+            mod.load_env = self._original_load_env
+            mod.os.environ.pop('DB_PASSWORD', None)
+
+            mod.load_env(str(env_path))
+
+        self.assertEqual(mod.os.environ['DB_PASSWORD'], 'abc#123')
+
     def test_text_expr_wraps_base64_mysql_expression(self):
         expr = mod.text_expr("hello 'world'")
         self.assertIn('FROM_BASE64', expr)

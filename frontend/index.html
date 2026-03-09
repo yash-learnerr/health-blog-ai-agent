@@ -34,79 +34,62 @@
   <body data-page="dashboard">
     <div class="shell">
       <div class="hero-stack">
-        <header class="hero">
-          <div class="app-header-brand">
-            <span class="app-header-kicker">Health AI Agent</span>
-            <strong></strong>
-          </div>
-          <nav class="hero-nav">
-            <div class="hero-nav-links">
-              <a class="nav-link active" href="/">Dashboard</a>
-              <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
-              <a class="nav-link" href="/frontend/blog-workflow.html"
-                >Workflow</a
-              >
-              <a class="nav-link" href="/frontend/agent-adoption-guide.html"
-                >Adoption Guide</a
-              >
-              <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+        <header class="hero dashboard-hero">
+          <div class="dashboard-hero-main">
+            <div class="app-header-brand">
+              <span class="app-header-kicker">Health AI Agent</span>
+              <strong>Dashboard overview</strong>
             </div>
-            <button
-              class="theme-toggle"
-              id="theme-toggle"
-              type="button"
-              aria-pressed="false"
-              aria-label="Switch to dark mode"
-            >
-              <span class="theme-toggle-track" aria-hidden="true">
-                <span class="theme-toggle-thumb"></span>
-                <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
-                <span class="theme-toggle-glyph theme-toggle-glyph-moon"
-                  >☾</span
+            <p class="dashboard-header-meta">
+              Last sync: <span id="generated-at">-</span>
+            </p>
+          </div>
+
+          <div class="dashboard-hero-side">
+            <nav class="hero-nav dashboard-hero-nav">
+              <div class="hero-nav-links">
+                <a class="nav-link active" href="/">Dashboard</a>
+                <a class="nav-link" href="/frontend/blogs.html">Blogs</a>
+                <a class="nav-link" href="/frontend/blog-workflow.html"
+                  >Workflow</a
                 >
-              </span>
-            </button>
-          </nav>
+                <a class="nav-link" href="/frontend/agent-adoption-guide.html"
+                  >Adoption Guide</a
+                >
+                <a class="nav-link" href="/frontend/run-guide.html">Run Guide</a>
+              </div>
+              <button
+                class="theme-toggle"
+                id="theme-toggle"
+                type="button"
+                aria-pressed="false"
+                aria-label="Switch to dark mode"
+              >
+                <span class="theme-toggle-track" aria-hidden="true">
+                  <span class="theme-toggle-thumb"></span>
+                  <span class="theme-toggle-glyph theme-toggle-glyph-sun">☀</span>
+                  <span class="theme-toggle-glyph theme-toggle-glyph-moon"
+                    >☾</span
+                  >
+                </span>
+              </button>
+              <span class="dashboard-live-pill" id="refresh-status" data-state="live"
+                >Live</span
+              >
+              <div class="dashboard-refresh-mini">
+                <span class="label">Next refresh</span>
+                <strong id="refresh-countdown">30s</strong>
+              </div>
+            </nav>
+          </div>
         </header>
         <div class="hero-divider" aria-hidden="true"></div>
       </div>
 
       <main class="page-content">
-        <section class="page-intro">
-          <p class="eyebrow">Operational command center</p>
-          <h1>Health AI agent dashboard</h1>
-          <p class="hero-copy">
-            Live monitoring for runs, logs, memory facts, and token usage pulled
-            from the configured operational source.
-          </p>
-        </section>
-
-        <section class="panel">
-          <div class="panel-head">
-            <div>
-              <p class="eyebrow">Getting started</p>
-              <h2>Need to run this project locally?</h2>
-            </div>
-          </div>
-          <div class="workflow-card-grid two-up">
-            <article class="workflow-mini-card">
-              <strong>Open the run guide</strong>
-              <p>
-                View the step-by-step startup commands, dashboard options, and
-                key files to open after launch.
-              </p>
-              <p>
-                <a class="blog-link secondary" href="/frontend/run-guide.html"
-                  >Open Run Guide</a
-                >
-              </p>
-            </article>
-          </div>
-        </section>
-
         <section class="metrics-grid" id="metric-cards"></section>
 
-        <section class="panel-grid">
+        <section class="panel-grid panel-grid-charts">
           <article class="panel chart-panel">
             <div class="panel-head">
               <div>
@@ -121,14 +104,14 @@
             <div class="panel-head">
               <div>
                 <p class="eyebrow">Usage profile</p>
-                <h2>Token totals</h2>
+                <h2>Requests by day</h2>
               </div>
             </div>
             <div class="bar-chart compact" id="token-chart"></div>
           </article>
         </section>
 
-        <section class="panel-grid">
+        <section class="panel-grid panel-grid-operations">
           <article class="panel">
             <div class="panel-head">
               <div>
@@ -145,7 +128,6 @@
                     <th>Success</th>
                     <th>Error</th>
                     <th>Requests</th>
-                    <th>Total tokens</th>
                     <th>Last seen</th>
                   </tr>
                 </thead>
@@ -187,6 +169,29 @@
               </thead>
               <tbody id="logs-body"></tbody>
             </table>
+          </div>
+        </section>
+
+        <section class="panel dashboard-help-panel">
+          <div class="panel-head">
+            <div>
+              <p class="eyebrow">Getting started</p>
+              <h2>Need to run this project locally?</h2>
+            </div>
+          </div>
+          <div class="workflow-card-grid two-up">
+            <article class="workflow-mini-card">
+              <strong>Open the run guide</strong>
+              <p>
+                View the step-by-step startup commands, dashboard options, and
+                key files to open after launch.
+              </p>
+              <p>
+                <a class="blog-link secondary" href="/frontend/run-guide.html"
+                  >Open Run Guide</a
+                >
+              </p>
+            </article>
           </div>
         </section>
       </main>

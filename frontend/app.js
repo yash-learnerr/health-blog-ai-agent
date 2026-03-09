@@ -22,6 +22,12 @@ function setText(id, value) {
 const THEME_STORAGE_KEY = "health-agent-theme";
 const THEME_LIGHT = "light";
 const THEME_DARK = "dark";
+const DASHBOARD_REFRESH_INTERVAL_MS = 30000;
+
+let dashboardRefreshTimer = 0;
+let dashboardRefreshCountdownTimer = 0;
+let dashboardRefreshInFlight = false;
+let dashboardNextRefreshAt = 0;
 
 function storedTheme() {
   try {
@@ -241,9 +247,6 @@ function renderMetricCards(stats) {
     ["Success events", stats.success_events, "✓", "emerald"],
     ["Memory facts", stats.memory_facts, "✦", "amber"],
     ["Requests", stats.request_count, "↗", "cyan"],
-    ["Prompt tokens", stats.prompt_tokens, "⌘", "violet"],
-    ["Completion tokens", stats.completion_tokens, "✎", "sky"],
-    ["Total tokens", stats.total_tokens, "◎", "blue"],
   ];
   const grid = document.getElementById("metric-cards");
   if (!grid) {
@@ -271,7 +274,6 @@ function dashboardChartSeries() {
 function tokenChartSeries() {
   return [
     { key: "request_count", label: "Requests", color: "var(--chart-request)" },
-    { key: "total_tokens", label: "Total tokens", color: "var(--chart-token)" },
   ];
 }
 
@@ -310,7 +312,7 @@ function renderRuns(runs) {
     return;
   }
   if (!Array.isArray(runs) || runs.length === 0) {
-    body.innerHTML = `<tr><td colspan="7"><div class="empty-state">No runs found.</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="6"><div class="empty-state">No runs found.</div></td></tr>`;
     return;
   }
   body.innerHTML = runs.map((run) => `
@@ -320,7 +322,6 @@ function renderRuns(runs) {
       <td>${formatNumber(run.success_count)}</td>
       <td>${formatNumber(run.error_count)}</td>
       <td>${formatNumber(run.request_count)}</td>
-      <td>${formatNumber(run.total_tokens)}</td>
       <td>${run.last_seen || "-"}</td>
     </tr>
   `).join("");
@@ -440,6 +441,58 @@ function renderBlogDetail(blog, dbTarget) {
   }
 }
 
+function setDashboardRefreshState(state, label) {
+  const pill = document.getElementById("refresh-status");
+  if (!pill) {
+    return;
+  }
+  pill.dataset.state = state;
+  pill.textContent = label;
+}
+
+function setDashboardRefreshButtonState(isRefreshing) {
+  const button = document.getElementById("dashboard-refresh-button");
+  if (!button) {
+    return;
+  }
+  button.disabled = isRefreshing;
+  button.textContent = isRefreshing ? "Refreshing…" : "Refresh now";
+}
+
+function updateDashboardRefreshCountdown() {
+  const countdown = document.getElementById("refresh-countdown");
+  if (!countdown) {
+    return;
+  }
+  if (dashboardRefreshInFlight) {
+    countdown.textContent = "Refreshing…";
+    return;
+  }
+  const remainingMs = Math.max(0, dashboardNextRefreshAt - Date.now());
+  countdown.textContent = `${Math.max(1, Math.ceil(remainingMs / 1000))}s`;
+}
+
+function clearDashboardRefreshTimers() {
+  if (dashboardRefreshTimer) {
+    window.clearTimeout(dashboardRefreshTimer);
+    dashboardRefreshTimer = 0;
+  }
+  if (dashboardRefreshCountdownTimer) {
+    window.clearInterval(dashboardRefreshCountdownTimer);
+    dashboardRefreshCountdownTimer = 0;
+  }
+}
+
+function scheduleDashboardAutoRefresh() {
+  clearDashboardRefreshTimers();
+  dashboardNextRefreshAt = Date.now() + DASHBOARD_REFRESH_INTERVAL_MS;
+  updateDashboardRefreshCountdown();
+  dashboardRefreshCountdownTimer = window.setInterval(updateDashboardRefreshCountdown, 500);
+  dashboardRefreshTimer = window.setTimeout(() => {
+    void refreshDashboardData({ background: true });
+  }, DASHBOARD_REFRESH_INTERVAL_MS);
+}
+
 function initWorkflowPage() {
   const links = Array.from(document.querySelectorAll(".workflow-toc-link"));
   if (!links.length) {
@@ -491,7 +544,7 @@ function initWorkflowPage() {
 }
 
 async function loadDashboard() {
-  const response = await fetch("/api/dashboard");
+  const response = await fetch("/api/dashboard", { cache: "no-store" });
   const payload = await response.json();
   if (!response.ok) {
     throw new Error(payload.error || "Failed to load dashboard data.");
@@ -507,6 +560,53 @@ async function loadDashboard() {
   renderRuns(snapshot.runs || []);
   renderLogs(snapshot.logs || []);
   renderMemory(snapshot.memory || []);
+}
+
+async function refreshDashboardData({ background = false } = {}) {
+  if (dashboardRefreshInFlight) {
+    return;
+  }
+  dashboardRefreshInFlight = true;
+  document.body.dataset.dashboardRefreshing = "true";
+  setDashboardRefreshButtonState(true);
+  setDashboardRefreshState(background ? "loading" : "manual", background ? "Auto refreshing" : "Refreshing");
+  updateDashboardRefreshCountdown();
+  try {
+    await loadDashboard();
+    setDashboardRefreshState("live", "Live");
+  } catch (error) {
+    setDashboardRefreshState("error", "Refresh failed");
+    if (!background) {
+      throw error;
+    }
+    console.error(error);
+  } finally {
+    dashboardRefreshInFlight = false;
+    document.body.dataset.dashboardRefreshing = "false";
+    setDashboardRefreshButtonState(false);
+    scheduleDashboardAutoRefresh();
+  }
+}
+
+function initDashboardAutoRefresh() {
+  setText("refresh-interval", "30 seconds");
+  setDashboardRefreshState("live", "Live");
+  updateDashboardRefreshCountdown();
+
+  const button = document.getElementById("dashboard-refresh-button");
+  if (button) {
+    button.addEventListener("click", () => {
+      void refreshDashboardData();
+    });
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "visible") {
+      void refreshDashboardData({ background: true });
+    }
+  });
+
+  scheduleDashboardAutoRefresh();
 }
 
 async function loadBlogs() {
@@ -541,6 +641,7 @@ async function init() {
   try {
     if (page === "dashboard") {
       await loadDashboard();
+      initDashboardAutoRefresh();
     } else if (page === "blogs") {
       await loadBlogs();
     } else if (page === "blog-detail") {

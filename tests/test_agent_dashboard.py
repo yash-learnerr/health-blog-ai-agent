@@ -168,6 +168,30 @@ class AgentDashboardTests(unittest.TestCase):
         self.assertIn('.metric-icon', css_text)
         self.assertIn('@keyframes border-shift', css_text)
 
+    def test_dashboard_auto_refresh_and_live_summary_exist(self):
+        index_text = Path('frontend/index.html').read_text(encoding='utf-8')
+        app_text = Path('frontend/app.js').read_text(encoding='utf-8')
+        css_text = Path('frontend/styles.css').read_text(encoding='utf-8')
+        self.assertIn('dashboard-header-meta', index_text)
+        self.assertIn('refresh-countdown', index_text)
+        self.assertIn('30s', index_text)
+        self.assertNotIn('dashboard-refresh-button', index_text)
+        self.assertNotIn('Data source', index_text)
+        self.assertNotIn('Host', index_text)
+        self.assertNotIn('>Refresh<', index_text)
+        self.assertNotIn('Total tokens', index_text)
+        self.assertNotIn('Dashboard health', index_text)
+        self.assertNotIn('Health AI agent dashboard', index_text)
+        self.assertIn('DASHBOARD_REFRESH_INTERVAL_MS = 30000', app_text)
+        self.assertNotIn('Prompt tokens', app_text)
+        self.assertNotIn('Completion tokens', app_text)
+        self.assertNotIn('Total tokens', app_text)
+        self.assertIn('initDashboardAutoRefresh()', app_text)
+        self.assertIn('refreshDashboardData({ background: true })', app_text)
+        self.assertIn('.dashboard-header-meta', css_text)
+        self.assertIn('.dashboard-live-pill', css_text)
+        self.assertIn('body[data-page="dashboard"] .shell', css_text)
+
 
 if __name__ == '__main__':
     unittest.main()

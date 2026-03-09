@@ -20,7 +20,27 @@ def load_env(path='.env'):
         if not line or line.startswith('#') or '=' not in line:
             continue
         key, value = line.split('=', 1)
-        os.environ.setdefault(key.strip(), value.strip())
+        os.environ.setdefault(key.strip(), _normalize_env_value(value))
+
+
+def _normalize_env_value(value):
+    text = str(value or '').strip()
+    quote = None
+    normalized = []
+    for index, char in enumerate(text):
+        if quote is not None:
+            normalized.append(char)
+            if char == quote:
+                quote = None
+            continue
+        if char in {"'", '"'}:
+            quote = char
+            normalized.append(char)
+            continue
+        if char == '#' and index > 0 and text[index - 1].isspace():
+            break
+        normalized.append(char)
+    return ''.join(normalized).rstrip()
 
 
 def sh(cmd, stdin=None, timeout_seconds=None):
