@@ -1,4 +1,5 @@
 import importlib.util
+import sys
 import tempfile
 import unittest
 from unittest import mock
@@ -625,6 +626,14 @@ class RunWorkflowTests(unittest.TestCase):
         messages = [args[3] for args, _kwargs in captured['logs']]
         self.assertIn('Workflow completed with 1 published blogs.', messages)
         self.assertTrue(any(args[1] == 'topic_execution' and args[2] == 'ERROR' for args, _kwargs in captured['logs']))
+
+    def test_main_uses_24_hour_default_recency_window(self):
+        with mock.patch.object(sys, 'argv', ['run_workflow.py']):
+            with mock.patch.object(mod, 'run_workflow', return_value=0) as workflow:
+                result = mod.main()
+
+        self.assertEqual(result, 0)
+        workflow.assert_called_once_with(recency_hours=72)
 
 
 if __name__ == '__main__':

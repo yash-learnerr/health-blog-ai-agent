@@ -31,6 +31,8 @@ USER_AGENT = 'GlobalHealthIntelligenceAgent/1.0'
 MAX_TOPICS = 3
 MIN_CONTENT_WORDS = 700
 MAX_CONTENT_WORDS = 1200
+DEFAULT_RECENCY_HOURS = 24
+MAX_RECENCY_FALLBACK_HOURS = 168
 LEARNING_CATEGORY_NAME = 'Learning'
 LEARNING_CATEGORY_SLUG = 'learning'
 LEARNING_TOPIC_LIBRARY = [
@@ -283,6 +285,7 @@ def parse_date(value):
 
 
 def source_configs():
+    # Runtime fetch list: feed-backed subset of config/NEWS_SOURCES.md.
     return [
         SourceConfig(
             name='World Health Organization',
@@ -312,6 +315,12 @@ def source_configs():
             name='JAMA Network',
             feed_url='https://jamanetwork.com/rss/site_3/67.xml',
             homepage_url='https://jamanetwork.com/news',
+            tier=2,
+        ),
+        SourceConfig(
+            name='Medical Journal of Australia',
+            feed_url='https://www.mja.com.au/rss.xml',
+            homepage_url='https://www.mja.com.au/news-and-views',
             tier=2,
         ),
     ]
@@ -362,7 +371,7 @@ def parse_feed_items(source, xml_text, recency_hours):
 
 def fetch_recent_news(run_id, recency_hours):
     candidate_windows = []
-    for window in (recency_hours, max(recency_hours, 72), max(recency_hours, 168)):
+    for window in (recency_hours, max(recency_hours, DEFAULT_RECENCY_HOURS), max(recency_hours, MAX_RECENCY_FALLBACK_HOURS)):
         if window not in candidate_windows:
             candidate_windows.append(window)
 
@@ -458,11 +467,11 @@ def categorize_article(article):
 
 def score_article(article):
     score = 0
-    score += 100 if article.tier == 1 else 75
+    score += 100 if article.tier == 1 else 75 if article.tier == 2 else 50
     score += 10 if any(term in article.title.lower() for term in ['who', 'cdc', 'nih', 'ecdc']) else 0
     score += 5 if len(article.description) > 140 else 0
     age_hours = max((now_utc() - article.published_at).total_seconds() / 3600, 0)
-    score += max(0, 24 - age_hours)
+    score += max(0, DEFAULT_RECENCY_HOURS - age_hours)
     return score
 
 
@@ -1277,7 +1286,7 @@ def update_markdown_mirrors(run_id, published_blogs, memory_facts):
     append_text('logs/MEMORY_STORE.md', '\n'.join(memory_summary))
 
 
-def run_workflow(recency_hours=24):
+def run_workflow(recency_hours=DEFAULT_RECENCY_HOURS):
     agent_db.load_env()
     run_id = agent_db.current_run_id('workflow')
     published = []
@@ -1362,7 +1371,7 @@ def main():
     parser = argparse.ArgumentParser(
         description='Run the autonomous Global Health Intelligence workflow end-to-end immediately after AGENT.md/workflow review without waiting for a second prompt.'
     )
-    parser.add_argument('--recency-hours', type=int, default=24, help='Maximum article age to accept from source feeds.')
+    parser.add_argument('--recency-hours', type=int, default=DEFAULT_RECENCY_HOURS, help='Maximum article age to accept from source feeds.')
     args = parser.parse_args()
     return run_workflow(recency_hours=args.recency_hours)
 
