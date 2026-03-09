@@ -8,12 +8,12 @@ The Global Health Intelligence Agent runs on a scheduled basis. This file define
 
 ## Schedule
 
-| Setting | Value |
-|---|---|
-| Frequency | Every 2 hours |
-| Cron Expression | `0 */2 * * *` |
-| Timezone | UTC |
-| First Run | On first deployment |
+| Setting         | Value               |
+| --------------- | ------------------- |
+| Frequency       | Every 2 hours       |
+| Cron Expression | `0 */2 * * *`       |
+| Timezone        | UTC                 |
+| First Run       | On first deployment |
 
 ---
 
@@ -36,6 +36,7 @@ The Global Health Intelligence Agent runs on a scheduled basis. This file define
 ### Method 1: System Cron (Linux/macOS)
 
 Add to your crontab:
+
 ```
 0 */2 * * * /path/to/trigger-agent.sh >> /var/log/health-agent.log 2>&1
 ```
@@ -44,7 +45,11 @@ Add to your crontab:
 
 Trigger the workflow once with `AGENT.md` and `docs/workflows/MAIN_WORKFLOW.md` as inputs.
 
-Direct trigger phrases such as `Read AGENT.md`, `Start AGENT.md`, or equivalent review/start instructions should be treated as a single authorization to read the contract first and then begin the workflow automatically.
+Primary trigger command: `start-agent`
+
+Accepted trigger command aliases and equivalent start phrases: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, `execute-agent`
+
+Legacy trigger phrases such as `Read AGENT.md`, `Start AGENT.md`, or equivalent review/start instructions should be treated as the same authorization to read the contract first and then begin the workflow automatically.
 
 After the trigger, the agent must continue autonomously without human intervention or approval prompts.
 If the run needs local commands or dependency recovery, the agent performs those actions itself and does not hand commands back to the human.
@@ -53,12 +58,12 @@ If the run needs local commands or dependency recovery, the agent performs those
 
 ## Run Limits
 
-| Setting | Value |
-|---|---|
-| Max articles per run | 20 |
-| Max topics per run | 3 |
-| Max blogs per run | 3 |
-| Max retries on Writer fail | 1 |
+| Setting                     | Value     |
+| --------------------------- | --------- |
+| Max articles per run        | 20        |
+| Max topics per run          | 3         |
+| Max blogs per run           | 3         |
+| Max retries on Writer fail  | 1         |
 | Timeout per blog generation | 5 minutes |
 
 ---

@@ -202,6 +202,10 @@ Repository notes:
 
 Read `AGENT.md` and `docs/workflows/MAIN_WORKFLOW.md`, then start the workflow.
 
+If you are triggering the repository through an AI/agent interface, use `start-agent` as the primary command.
+Accepted aliases and equivalent start phrases: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, `execute-agent`.
+Legacy prompts such as `Read AGENT.md` and `Start AGENT.md` remain valid.
+
 - PowerShell launcher: `powershell -ExecutionPolicy Bypass -File .\scripts\start_agent.ps1`
 - Python entrypoint: `python scripts/run_workflow.py --recency-hours-24`
 
@@ -267,6 +271,8 @@ Optional dashboard login for `--serve` mode can be controlled from `.env`:
 #### Short command setup
 
 `.env` can store launcher settings, but it does not register a universal command in every CLI or IDE by itself. This repo includes `scripts/start_agent.ps1` so you can point your shell or IDE at one stable entrypoint.
+
+For agent-driven starts, the repository contract recognizes `start-agent` as the main trigger command plus these aliases and equivalent start phrases: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, `execute-agent`.
 
 Optional launcher keys in `.env`:
 

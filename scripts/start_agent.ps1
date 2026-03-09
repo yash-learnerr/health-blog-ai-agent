@@ -1,7 +1,7 @@
 <#
 Launcher contract:
 - This entrypoint starts the workflow immediately.
-- If invoked after `AGENT.md` review or from a `Start AGENT.md` style trigger, do not wait for a second confirmation prompt.
+- If invoked after `AGENT.md` review or from a `start-agent`, `start agent`, `start work`, `start-work`, or `Start AGENT.md` style trigger, do not wait for a second confirmation prompt.
 #>
 
 $ErrorActionPreference = 'Stop'

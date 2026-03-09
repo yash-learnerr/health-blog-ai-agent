@@ -49,6 +49,29 @@ class RepositoryContractTests(unittest.TestCase):
         self.assertIn('Do not tell the human to run repository commands on your behalf', text)
         self.assertIn('No command handoff', text)
 
+    def test_start_command_aliases_are_documented(self):
+        combined = '\n'.join([
+            Path('AGENT.md').read_text(encoding='utf-8'),
+            Path('README.md').read_text(encoding='utf-8'),
+            Path('config/SCHEDULER.md').read_text(encoding='utf-8'),
+            Path('frontend/run-guide.html').read_text(encoding='utf-8'),
+        ])
+        for command in [
+            'start',
+            'start agent',
+            'start work',
+            'start-agent',
+            'start-work',
+            'run-agent',
+            'create-blog',
+            'init-blog-agent',
+            'agent-start',
+            'begin-task',
+            'generate-blog',
+            'execute-agent',
+        ]:
+            self.assertIn(command, combined)
+
     def test_readme_and_scheduler_describe_autonomous_start_not_ai_mediation(self):
         readme = Path('README.md').read_text(encoding='utf-8')
         scheduler = Path('config/SCHEDULER.md').read_text(encoding='utf-8')

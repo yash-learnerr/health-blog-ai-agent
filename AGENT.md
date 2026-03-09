@@ -35,7 +35,10 @@ Each run is expected to complete the full workflow end-to-end: gather sources, s
 - Do not ask for confirmation at any step.
 - Do not present options and wait for a choice.
 - Do not stop for review unless the entire run is externally blocked.
-- Treat direct trigger phrases such as `Read AGENT.md`, `Start AGENT.md`, or equivalent review/start instructions as authorization to read this file first and then automatically begin the workflow without waiting for any additional human message.
+- Treat `start-agent` as the primary workflow trigger command.
+- Treat these aliases and equivalent start phrases as workflow trigger commands: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, and `execute-agent`.
+- Treat legacy review/start phrases such as `Read AGENT.md`, `Start AGENT.md`, or equivalent review/start instructions as the same authorization.
+- When any approved trigger command or trigger phrase is received, read this file first, then automatically begin the workflow without waiting for any additional human message.
 - Once the workflow starts, decide autonomously and continue execution without requesting human permission for intermediate actions.
 - Once the workflow starts, you are the task owner: choose the next step yourself and complete the workflow without handing decisions back to a human.
 - Do not tell the human to run repository commands on your behalf. If a local command is needed and the runtime allows command execution, run it yourself.
@@ -86,13 +89,13 @@ Each run is expected to complete the full workflow end-to-end: gather sources, s
 
 The agent uses the following operating layers and role contracts.
 
-| Layer        | File                           | Responsibility                                                    |
-| ------------ | ------------------------------ | ----------------------------------------------------------------- |
-| Architecture | `docs/architecture/ARCHITECTURE.md` | Defines system context for the MyDrScripts environment        |
-| Runner       | `docs/runner/RUNNER.md`             | Starts the run, loads config, and initializes the publish target |
-| Planner      | `docs/planner/PLANNER.md`           | Selects publish-worthy topics and the correct content category   |
-| Execution    | `docs/execution/EXECUTION.md`       | Orchestrates the ordered pipeline end to end                     |
-| Tester       | `docs/tester/TESTER.md`             | Runs deterministic output and schema checks                      |
+| Layer        | File                                | Responsibility                                                    |
+| ------------ | ----------------------------------- | ----------------------------------------------------------------- |
+| Architecture | `docs/architecture/ARCHITECTURE.md` | Defines system context for the MyDrScripts environment            |
+| Runner       | `docs/runner/RUNNER.md`             | Starts the run, loads config, and initializes the publish target  |
+| Planner      | `docs/planner/PLANNER.md`           | Selects publish-worthy topics and the correct content category    |
+| Execution    | `docs/execution/EXECUTION.md`       | Orchestrates the ordered pipeline end to end                      |
+| Tester       | `docs/tester/TESTER.md`             | Runs deterministic output and schema checks                       |
 | Verifier     | `docs/verifier/VERIFIER.md`         | Enforces final evidence, duplication, and publish-readiness rules |
 
 Supporting role files remain in `/docs/roles/` for specialist tasks such as research, writing, publishing, and memory management.
