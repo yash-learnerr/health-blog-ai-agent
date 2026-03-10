@@ -252,6 +252,53 @@ class AgentDbTests(unittest.TestCase):
         self.assertEqual(row['content'], 'Full JSON content.')
         self.assertEqual(row['source_url'], 'https://example.com/source')
 
+    def test_store_published_blog_json_appends_blog_record(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mod.os.environ['AGENT_JSON_STORAGE_DIR'] = temp_dir
+
+            record = mod.store_published_blog_json(
+                {
+                    'title': 'JSON Published Blog',
+                    'slug': 'json-published-blog',
+                    'category_name': 'Research',
+                    'summary': 'Summary from JSON publish.',
+                    'content': 'Body from JSON publish.',
+                    'source_url': 'https://example.com/published',
+                },
+                file_url='https://cdn.example.com/blog-master/json-published-blog.jpg',
+                image_url='https://cdn.example.com/blog-master/json-published-blog.jpg',
+            )
+
+            payload = json.loads(Path(temp_dir, 'blogs.json').read_text(encoding='utf-8'))
+
+        self.assertEqual(record['id'], 1)
+        self.assertEqual(payload[0]['slug'], 'json-published-blog')
+        self.assertEqual(payload[0]['category_id'], 1)
+        self.assertEqual(payload[0]['file_url'], 'https://cdn.example.com/blog-master/json-published-blog.jpg')
+
+    def test_json_blog_duplicate_exists_checks_slug_and_source_url(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            mod.os.environ['AGENT_JSON_STORAGE_DIR'] = temp_dir
+            Path(temp_dir, 'blogs.json').write_text(json.dumps([
+                {
+                    'id': 4,
+                    'title': 'Existing JSON Blog',
+                    'slug': 'existing-json-blog',
+                    'category_name': 'Research',
+                    'summary': 'Existing summary.',
+                    'source_url': 'https://example.com/existing',
+                    'created_at': '2026-03-10 04:00:00',
+                }
+            ], ensure_ascii=False), encoding='utf-8')
+
+            slug_result = mod.json_blog_duplicate_exists('existing-json-blog', 'https://example.com/other')
+            source_result = mod.json_blog_duplicate_exists('new-slug', 'https://example.com/existing')
+            fresh_result = mod.json_blog_duplicate_exists('fresh-slug', 'https://example.com/fresh')
+
+        self.assertEqual(slug_result, (True, 'slug match'))
+        self.assertEqual(source_result, (True, 'source_url match'))
+        self.assertEqual(fresh_result, (False, ''))
+
     def test_sh_timeout_raises_runtime_error(self):
         with self.assertRaises(RuntimeError):
             mod.sh(['python3', '-c', 'import time; time.sleep(1)'], timeout_seconds=0)

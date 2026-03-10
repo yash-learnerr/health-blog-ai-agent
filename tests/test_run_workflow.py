@@ -1,4 +1,5 @@
 import importlib.util
+import json
 import sys
 import tempfile
 import unittest
@@ -24,6 +25,7 @@ class RunWorkflowTests(unittest.TestCase):
     def test_publish_blog_stores_uploaded_image_url_in_file_column(self):
         original_category_id_for = mod.category_id_for
         original_upload_blog_image = mod.blog_file_manager.upload_blog_image
+        original_operational_storage_backend = mod.agent_db.operational_storage_backend
         original_database_access = mod.agent_db.database_access
         original_publish_db_name = mod.agent_db.publish_db_name
         original_table_columns = mod.agent_db._table_columns
@@ -33,6 +35,7 @@ class RunWorkflowTests(unittest.TestCase):
         captured = {}
         mod.category_id_for = lambda blog: 9
         mod.blog_file_manager.upload_blog_image = lambda blog: ('blog-master/cover.jpg', 'https://cdn.example.com/blog-master/cover.jpg')
+        mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_DATABASE
         mod.agent_db.database_access = lambda use_staging=None: 'local'
         mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
         mod.agent_db._table_columns = lambda db, table: {
@@ -62,6 +65,7 @@ class RunWorkflowTests(unittest.TestCase):
         finally:
             mod.category_id_for = original_category_id_for
             mod.blog_file_manager.upload_blog_image = original_upload_blog_image
+            mod.agent_db.operational_storage_backend = original_operational_storage_backend
             mod.agent_db.database_access = original_database_access
             mod.agent_db.publish_db_name = original_publish_db_name
             mod.agent_db._table_columns = original_table_columns
@@ -78,6 +82,7 @@ class RunWorkflowTests(unittest.TestCase):
     def test_publish_blog_stores_relative_file_key_in_staging(self):
         original_category_id_for = mod.category_id_for
         original_upload_blog_image = mod.blog_file_manager.upload_blog_image
+        original_operational_storage_backend = mod.agent_db.operational_storage_backend
         original_database_access = mod.agent_db.database_access
         original_publish_db_name = mod.agent_db.publish_db_name
         original_table_columns = mod.agent_db._table_columns
@@ -90,6 +95,7 @@ class RunWorkflowTests(unittest.TestCase):
             'blog-master/cover.jpg',
             'https://mydrscript-staging-bucket.syd1.digitaloceanspaces.com/blog-master/cover.jpg',
         )
+        mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_DATABASE
         mod.agent_db.database_access = lambda use_staging=None: 'staging'
         mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
         mod.agent_db._table_columns = lambda db, table: {
@@ -119,6 +125,7 @@ class RunWorkflowTests(unittest.TestCase):
         finally:
             mod.category_id_for = original_category_id_for
             mod.blog_file_manager.upload_blog_image = original_upload_blog_image
+            mod.agent_db.operational_storage_backend = original_operational_storage_backend
             mod.agent_db.database_access = original_database_access
             mod.agent_db.publish_db_name = original_publish_db_name
             mod.agent_db._table_columns = original_table_columns
@@ -132,6 +139,7 @@ class RunWorkflowTests(unittest.TestCase):
     def test_publish_blog_falls_back_to_source_image_url_when_upload_fails(self):
         original_category_id_for = mod.category_id_for
         original_upload_blog_image = mod.blog_file_manager.upload_blog_image
+        original_operational_storage_backend = mod.agent_db.operational_storage_backend
         original_database_access = mod.agent_db.database_access
         original_publish_db_name = mod.agent_db.publish_db_name
         original_table_columns = mod.agent_db._table_columns
@@ -141,6 +149,7 @@ class RunWorkflowTests(unittest.TestCase):
         captured = {'logs': []}
         mod.category_id_for = lambda blog: 9
         mod.blog_file_manager.upload_blog_image = lambda blog: (_ for _ in ()).throw(RuntimeError('upload unavailable'))
+        mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_DATABASE
         mod.agent_db.database_access = lambda use_staging=None: 'local'
         mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
         mod.agent_db._table_columns = lambda db, table: {
@@ -170,6 +179,7 @@ class RunWorkflowTests(unittest.TestCase):
         finally:
             mod.category_id_for = original_category_id_for
             mod.blog_file_manager.upload_blog_image = original_upload_blog_image
+            mod.agent_db.operational_storage_backend = original_operational_storage_backend
             mod.agent_db.database_access = original_database_access
             mod.agent_db.publish_db_name = original_publish_db_name
             mod.agent_db._table_columns = original_table_columns
@@ -185,8 +195,10 @@ class RunWorkflowTests(unittest.TestCase):
         original_publish_db_name = mod.agent_db.publish_db_name
         original_table_columns = mod.agent_db._table_columns
         original_query_rows = mod.agent_db._query_rows
+        original_operational_storage_backend = mod.agent_db.operational_storage_backend
         captured = {'queries': []}
         mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
+        mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_DATABASE
         mod.agent_db._table_columns = lambda db, table: {'blog_name', 'slug', 'status'}
 
         def fake_query_rows(sql, expected_cols):
@@ -200,11 +212,36 @@ class RunWorkflowTests(unittest.TestCase):
             mod.agent_db.publish_db_name = original_publish_db_name
             mod.agent_db._table_columns = original_table_columns
             mod.agent_db._query_rows = original_query_rows
+            mod.agent_db.operational_storage_backend = original_operational_storage_backend
 
         self.assertEqual(result, (False, ''))
         self.assertEqual(len(captured['queries']), 1)
         self.assertIn('WHERE BINARY slug = BINARY', captured['queries'][0])
         self.assertNotIn('source_url', captured['queries'][0])
+
+    def test_duplicate_exists_reads_json_blogs_when_storage_backend_is_json(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            Path(temp_dir, 'blogs.json').write_text(json.dumps([
+                {
+                    'id': 8,
+                    'title': 'Existing JSON Blog',
+                    'slug': 'existing-json-blog',
+                    'category_name': 'Research',
+                    'summary': 'Existing summary.',
+                    'source_url': 'https://example.com/existing',
+                    'created_at': '2026-03-10 04:00:00',
+                }
+            ], ensure_ascii=False), encoding='utf-8')
+
+            with mock.patch.dict(mod.agent_db.os.environ, {'AGENT_JSON_STORAGE_DIR': temp_dir}, clear=False), \
+                 mock.patch.object(mod.agent_db, 'operational_storage_backend', return_value=mod.agent_db.STORAGE_BACKEND_JSON), \
+                 mock.patch.object(mod.agent_db, '_table_columns', side_effect=AssertionError('db schema lookup should not run in json mode')), \
+                 mock.patch.object(mod.agent_db, '_query_rows', side_effect=AssertionError('db query should not run in json mode')):
+                slug_result = mod.duplicate_exists('existing-json-blog', 'https://example.com/other')
+                source_result = mod.duplicate_exists('fresh-slug', 'https://example.com/existing')
+
+        self.assertEqual(slug_result, (True, 'slug match'))
+        self.assertEqual(source_result, (True, 'source_url match'))
 
     def test_category_id_for_uses_name_column_for_new_schema(self):
         original_publish_db_name = mod.agent_db.publish_db_name
@@ -369,19 +406,21 @@ class RunWorkflowTests(unittest.TestCase):
         self.assertEqual(captured[0]['memory_key'], 'sample-topic-fact-1')
         self.assertEqual(captured[0]['status'], 'active')
 
-    def test_ensure_publish_tables_skips_operational_db_init_in_json_mode(self):
+    def test_ensure_publish_tables_uses_json_store_in_json_mode(self):
         original_publish_db_name = mod.agent_db.publish_db_name
         original_operational_storage_backend = mod.agent_db.operational_storage_backend
         original_mysql = mod.agent_db.mysql
         original_migrate_publish_tables = mod.migrate_publish_tables
         original_ensure_operational_tables = mod.agent_db.ensure_operational_tables
+        original_ensure_json_blog_store = mod.agent_db.ensure_json_blog_store
         captured = {}
 
         mod.agent_db.publish_db_name = lambda: 'publish_db'
         mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_JSON
-        mod.agent_db.mysql = lambda sql: captured.setdefault('sql', sql)
-        mod.migrate_publish_tables = lambda publish_db=None: captured.setdefault('publish_db', publish_db)
+        mod.agent_db.mysql = lambda sql: (_ for _ in ()).throw(AssertionError('mysql should not run in json mode'))
+        mod.migrate_publish_tables = lambda publish_db=None: (_ for _ in ()).throw(AssertionError('publish table migration should not run in json mode'))
         mod.agent_db.ensure_operational_tables = lambda: (_ for _ in ()).throw(AssertionError('should not initialize operational tables in json mode'))
+        mod.agent_db.ensure_json_blog_store = lambda: captured.setdefault('json_store', True)
         try:
             mod.ensure_publish_tables()
         finally:
@@ -390,10 +429,40 @@ class RunWorkflowTests(unittest.TestCase):
             mod.agent_db.mysql = original_mysql
             mod.migrate_publish_tables = original_migrate_publish_tables
             mod.agent_db.ensure_operational_tables = original_ensure_operational_tables
+            mod.agent_db.ensure_json_blog_store = original_ensure_json_blog_store
 
-        self.assertIn('CREATE DATABASE IF NOT EXISTS `publish_db`;', captured['sql'])
-        self.assertNotIn('health_ai_agent', captured['sql'])
-        self.assertEqual(captured['publish_db'], 'publish_db')
+        self.assertTrue(captured['json_store'])
+
+    def test_publish_blog_writes_json_when_storage_backend_is_json(self):
+        captured = {'logs': []}
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            with mock.patch.dict(mod.agent_db.os.environ, {'AGENT_JSON_STORAGE_DIR': temp_dir}, clear=False), \
+                 mock.patch.object(mod.agent_db, 'operational_storage_backend', return_value=mod.agent_db.STORAGE_BACKEND_JSON), \
+                 mock.patch.object(mod.blog_file_manager, 'upload_blog_image', return_value=('blog-master/cover.jpg', 'https://cdn.example.com/blog-master/cover.jpg')), \
+                 mock.patch.object(mod.agent_db, 'safe_log_event', side_effect=lambda *args, **kwargs: captured['logs'].append((args, kwargs)) or True), \
+                 mock.patch.object(mod.agent_db, '_table_columns', side_effect=AssertionError('db schema lookup should not run in json mode')), \
+                 mock.patch.object(mod.agent_db, '_query_rows', side_effect=AssertionError('db query should not run in json mode')):
+                blog_id = mod.publish_blog(
+                    'run-json',
+                    {
+                        'slug': 'json-mode-blog',
+                        'title': 'JSON Mode Blog',
+                        'category_name': 'Research',
+                        'summary': 'JSON summary.',
+                        'content': 'JSON body.',
+                        'keywords': ['one', 'two'],
+                        'source_url': 'https://example.com/json-mode',
+                        'image_source_url': 'https://example.com/cover.jpg',
+                    },
+                )
+
+            payload = json.loads(Path(temp_dir, 'blogs.json').read_text(encoding='utf-8'))
+
+        self.assertEqual(blog_id, 1)
+        self.assertEqual(payload[0]['slug'], 'json-mode-blog')
+        self.assertEqual(payload[0]['file_url'], 'https://cdn.example.com/blog-master/cover.jpg')
+        self.assertTrue(any(args[3] == 'Published blog.' for args, _kwargs in captured['logs']))
 
     def test_build_learning_blog_passes_validation_and_verification(self):
         topic = dict(next(item for item in mod.LEARNING_TOPIC_LIBRARY if item['slug'] == 'learning-hand-hygiene-healthcare-associated-infection'))
@@ -494,6 +563,7 @@ class RunWorkflowTests(unittest.TestCase):
         temp_image.close()
         original_category_id_for = mod.category_id_for
         original_upload_blog_image = mod.blog_file_manager.upload_blog_image
+        original_operational_storage_backend = mod.agent_db.operational_storage_backend
         original_database_access = mod.agent_db.database_access
         original_publish_db_name = mod.agent_db.publish_db_name
         original_table_columns = mod.agent_db._table_columns
@@ -503,6 +573,7 @@ class RunWorkflowTests(unittest.TestCase):
         captured = {'logs': []}
         mod.category_id_for = lambda blog: 9
         mod.blog_file_manager.upload_blog_image = lambda blog: (_ for _ in ()).throw(RuntimeError('upload unavailable'))
+        mod.agent_db.operational_storage_backend = lambda: mod.agent_db.STORAGE_BACKEND_DATABASE
         mod.agent_db.database_access = lambda use_staging=None: 'local'
         mod.agent_db.publish_db_name = lambda: 'mydrscripts_new'
         mod.agent_db._table_columns = lambda db, table: {
@@ -532,6 +603,7 @@ class RunWorkflowTests(unittest.TestCase):
         finally:
             mod.category_id_for = original_category_id_for
             mod.blog_file_manager.upload_blog_image = original_upload_blog_image
+            mod.agent_db.operational_storage_backend = original_operational_storage_backend
             mod.agent_db.database_access = original_database_access
             mod.agent_db.publish_db_name = original_publish_db_name
             mod.agent_db._table_columns = original_table_columns

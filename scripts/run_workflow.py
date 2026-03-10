@@ -481,6 +481,8 @@ def score_article(article):
 
 
 def duplicate_exists(slug, source_url):
+    if agent_db.operational_storage_backend() == agent_db.STORAGE_BACKEND_JSON:
+        return agent_db.json_blog_duplicate_exists(slug, source_url)
     db = agent_db.publish_db_name()
     columns = agent_db._table_columns(db, 'blog_master')
     if not columns or 'slug' not in columns:
@@ -960,6 +962,9 @@ def verify_blog(blog):
 def ensure_publish_tables():
     publish_db = agent_db.publish_db_name()
     operational_backend = agent_db.operational_storage_backend()
+    if operational_backend == agent_db.STORAGE_BACKEND_JSON:
+        agent_db.ensure_json_blog_store()
+        return
     sql = f"""
 CREATE DATABASE IF NOT EXISTS `{publish_db}`;
 USE `{publish_db}`;
@@ -1150,7 +1155,6 @@ def category_id_for(blog):
 
 
 def publish_blog(run_id, blog):
-    category_id = category_id_for(blog)
     published_file_url = None
     if blog.get('image_source_url'):
         try:
@@ -1171,6 +1175,18 @@ def publish_blog(run_id, blog):
                 details={'image_source_url': blog.get('image_source_url'), 'fallback_image_url': fallback_image_url},
             )
             published_file_url = fallback_image_url
+    if agent_db.operational_storage_backend() == agent_db.STORAGE_BACKEND_JSON:
+        record = agent_db.store_published_blog_json(blog, file_url=published_file_url, image_url=published_file_url)
+        agent_db.safe_log_event(
+            run_id,
+            'publisher',
+            'SUCCESS',
+            'Published blog.',
+            item_slug=blog['slug'],
+            details={'blog_id': record['id'], 'category_id': record.get('category_id', 0), 'file_url': published_file_url},
+        )
+        return int(record['id'])
+    category_id = category_id_for(blog)
     stored_file_value = agent_db.blog_master_file_db_value(published_file_url)
     db = agent_db.publish_db_name()
     columns = agent_db._table_columns(db, 'blog_master')
@@ -1300,7 +1316,7 @@ def run_workflow(recency_hours=DEFAULT_RECENCY_HOURS):
     agent_db.safe_log_event(run_id, 'runner', 'STARTED', 'Autonomous workflow started.', details={'backend': agent_db.database_backend()})
     try:
         ensure_publish_tables()
-        agent_db.safe_log_event(run_id, 'database_init', 'SUCCESS', 'Verified operational and publish tables.')
+        agent_db.safe_log_event(run_id, 'database_init', 'SUCCESS', 'Verified publish destination and operational storage.')
         memory_rows = fetch_memory_context()
         agent_db.safe_log_event(run_id, 'memory_retrieval', 'SUCCESS', f'Retrieved {len(memory_rows)} memory rows.')
         news_error = ''

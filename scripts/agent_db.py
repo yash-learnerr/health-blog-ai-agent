@@ -783,6 +783,110 @@ def _blog_json_paths():
     return paths
 
 
+def json_blogs_write_path():
+    configured = _first_env_value('AGENT_BLOGS_JSON_PATH', 'BLOG_JSON_PATH', 'BLOG_JSON_PATHS')
+    if configured:
+        first = next((str(raw or '').strip() for raw in configured.split(os.pathsep) if str(raw or '').strip()), '')
+        if first:
+            candidate = Path(first).expanduser()
+            if not candidate.is_absolute():
+                candidate = json_storage_dir() / candidate
+            if candidate.suffix.lower() == '.json':
+                return candidate.resolve()
+            return (candidate / JSON_BLOGS_FILE_NAME).resolve()
+    return (json_storage_dir() / JSON_BLOGS_FILE_NAME).resolve()
+
+
+def ensure_json_blog_store():
+    path = json_blogs_write_path()
+    if not path.exists():
+        _write_json_records(path, [])
+        return path
+    raw = path.read_text(encoding='utf-8').strip()
+    if not raw:
+        _write_json_records(path, [])
+    return path
+
+
+def _read_json_blog_payload(path=None):
+    file_path = Path(path or json_blogs_write_path())
+    if not file_path.exists():
+        return [], 'list', file_path
+    raw = file_path.read_text(encoding='utf-8').strip()
+    if not raw:
+        return [], 'list', file_path
+    payload = json.loads(raw)
+    if isinstance(payload, dict) and isinstance(payload.get('blogs'), list):
+        return list(payload.get('blogs') or []), 'dict', file_path
+    if isinstance(payload, list):
+        return list(payload), 'list', file_path
+    if isinstance(payload, dict):
+        return [payload], 'single', file_path
+    raise RuntimeError(f'unsupported blog JSON payload in {file_path}')
+
+
+def _write_json_blog_payload(path, rows, payload_mode='list'):
+    file_path = Path(path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    if payload_mode == 'dict':
+        payload = {'blogs': rows}
+    elif payload_mode in {'list', 'single'}:
+        payload = rows
+    else:
+        raise RuntimeError(f'unsupported blog JSON payload mode: {payload_mode}')
+    file_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding='utf-8')
+
+
+def _json_blog_category_id(category_name):
+    wanted = str(category_name or '').strip()
+    categories = []
+    for row in _read_json_blog_rows():
+        name = str(row.get('category_name') or '').strip()
+        if name and name not in categories:
+            categories.append(name)
+    if wanted and wanted in categories:
+        return categories.index(wanted) + 1
+    return len(categories) + 1
+
+
+def json_blog_duplicate_exists(slug, source_url=None):
+    wanted_slug = str(slug or '').strip().lower()
+    wanted_source = str(source_url or '').strip().lower()
+    for row in _read_json_blog_rows():
+        row_slug = str(row.get('slug') or '').strip().lower()
+        if wanted_slug and row_slug == wanted_slug:
+            return True, 'slug match'
+        row_source = str(row.get('source_url') or '').strip().lower()
+        if wanted_source and row_source == wanted_source:
+            return True, 'source_url match'
+    return False, ''
+
+
+def store_published_blog_json(blog, file_url=None, image_url=None):
+    rows, payload_mode, path = _read_json_blog_payload()
+    normalized_category = str(blog.get('category_name') or '').strip()
+    record = {
+        'title': str(blog.get('title') or '').strip(),
+        'slug': str(blog.get('slug') or '').strip(),
+        'category_name': normalized_category,
+        'category_id': _json_blog_category_id(normalized_category),
+        'summary': str(blog.get('summary') or '').strip(),
+        'content': str(blog.get('content') or '').strip(),
+        'image_url': str(image_url or '').strip(),
+        'file_url': blog_master_file_public_url(file_url),
+        'source_url': str(blog.get('source_url') or '').strip(),
+        'status': 'active',
+        'created_at': _json_timestamp(),
+    }
+    if not any([record['slug'], record['title'], record['file_url']]):
+        raise RuntimeError('published JSON blog record is missing slug/title/file_url')
+    if _safe_int(record.get('id')) <= 0:
+        record['id'] = _next_json_id(rows)
+    rows.append(record)
+    _write_json_blog_payload(path, rows, payload_mode=payload_mode)
+    return record
+
+
 def _normalize_json_blog_row(row, default_id=0):
     if not isinstance(row, dict):
         return None
@@ -822,18 +926,7 @@ def _normalize_json_blog_row(row, default_id=0):
 def _read_json_blog_rows():
     rows = []
     for path in _blog_json_paths():
-        raw = path.read_text(encoding='utf-8').strip()
-        if not raw:
-            continue
-        payload = json.loads(raw)
-        if isinstance(payload, dict) and isinstance(payload.get('blogs'), list):
-            entries = payload.get('blogs') or []
-        elif isinstance(payload, list):
-            entries = payload
-        elif isinstance(payload, dict):
-            entries = [payload]
-        else:
-            raise RuntimeError(f'unsupported blog JSON payload in {path}')
+        entries, _payload_mode, _file_path = _read_json_blog_payload(path)
         for index, entry in enumerate(entries, start=1):
             normalized = _normalize_json_blog_row(entry, default_id=index)
             if normalized is not None:
