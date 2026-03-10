@@ -72,6 +72,20 @@ class RepositoryContractTests(unittest.TestCase):
         ]:
             self.assertIn(command, combined)
 
+    def test_start_launchers_exist_for_shell_python_and_powershell(self):
+        self.assertTrue(Path('start-agent').exists())
+        self.assertTrue(Path('scripts/start_agent.py').exists())
+        self.assertTrue(Path('scripts/start_agent.ps1').exists())
+
+    def test_start_docs_use_valid_recency_flag_syntax(self):
+        combined = '\n'.join([
+            Path('.env.example').read_text(encoding='utf-8'),
+            Path('README.md').read_text(encoding='utf-8'),
+            Path('frontend/run-guide.html').read_text(encoding='utf-8'),
+        ])
+        self.assertNotIn('--recency-hours-24', combined)
+        self.assertIn('--recency-hours 24', combined)
+
     def test_readme_and_scheduler_describe_autonomous_start_not_ai_mediation(self):
         readme = Path('README.md').read_text(encoding='utf-8')
         scheduler = Path('config/SCHEDULER.md').read_text(encoding='utf-8')

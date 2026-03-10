@@ -43,10 +43,12 @@ If you are opening this repository for the first time, use this order:
 
 - Validate the repository locally:
   - `python -m unittest discover -s tests`
+- Start the workflow with the local shell launcher:
+  - `./start-agent`
 - Start the workflow with the PowerShell launcher:
   - `powershell -ExecutionPolicy Bypass -File .\scripts\start_agent.ps1`
 - Or start it directly with Python:
-  - `python scripts/run_workflow.py --recency-hours-24`
+  - `python scripts/run_workflow.py --recency-hours 24`
 
 ### Where new developers should look first
 
@@ -206,8 +208,9 @@ If you are triggering the repository through an AI/agent interface, use `start-a
 Accepted aliases and equivalent start phrases: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, `execute-agent`.
 Legacy prompts such as `Read AGENT.md` and `Start AGENT.md` remain valid.
 
+- Local shell launcher: `./start-agent`
 - PowerShell launcher: `powershell -ExecutionPolicy Bypass -File .\scripts\start_agent.ps1`
-- Python entrypoint: `python scripts/run_workflow.py --recency-hours-24`
+- Python entrypoint: `python scripts/run_workflow.py --recency-hours 24`
 
 ### Method 2 — Schedule It with Your Own Orchestrator
 
@@ -217,7 +220,9 @@ This repository includes local launchers for manual runs, but scheduling/orchest
 
 #### Workflow startup and orchestration
 
+- `start-agent`: Linux/macOS-friendly repo launcher that forwards to the Python startup helper.
 - `scripts/run_workflow.py`: runs the end-to-end workflow from source fetch through publish/logging.
+- `scripts/start_agent.py`: cross-platform Python launcher that loads `.env` overrides and starts the workflow.
 - `scripts/start_agent.ps1`: PowerShell launcher that loads `.env` and starts the workflow with optional overrides.
 - `scripts/run_agent_loop.sh`: runs any command forever, always shows a cooldown timer, and restarts after both success and failure.
 
@@ -249,10 +254,12 @@ These are the most useful commands for a developer getting started locally.
 
 - Backfill a missing `blog_master.file` for an existing row:
   - `python3 scripts/blog_file_manager.py --blog-id 5`
+- Start the workflow through the local shell launcher:
+  - `./start-agent`
 - Start the workflow through the repo launcher:
   - `powershell -ExecutionPolicy Bypass -File .\scripts\start_agent.ps1`
 - Start the workflow directly through Python:
-  - `python scripts/run_workflow.py --recency-hours-24`
+  - `python scripts/run_workflow.py --recency-hours 24`
 - Run a command continuously with a 2-minute cooldown:
   - `COOLDOWN_SECONDS=120 bash scripts/run_agent_loop.sh <your-command>`
 - Generate a dashboard HTML page from the operational database:
@@ -270,7 +277,7 @@ Optional dashboard login for `--serve` mode can be controlled from `.env`:
 
 #### Short command setup
 
-`.env` can store launcher settings, but it does not register a universal command in every CLI or IDE by itself. This repo includes `scripts/start_agent.ps1` so you can point your shell or IDE at one stable entrypoint.
+`.env` can store launcher settings, but it does not register a universal command in every CLI or IDE by itself. This repo includes `./start-agent`, `scripts/start_agent.py`, and `scripts/start_agent.ps1` so you can point your shell or IDE at a stable entrypoint.
 
 For agent-driven starts, the repository contract recognizes `start-agent` as the main trigger command plus these aliases and equivalent start phrases: `start`, `start agent`, `start work`, `start-work`, `run-agent`, `create-blog`, `init-blog-agent`, `agent-start`, `begin-task`, `generate-blog`, `execute-agent`.
 

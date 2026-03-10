@@ -633,7 +633,7 @@ class RunWorkflowTests(unittest.TestCase):
                 result = mod.main()
 
         self.assertEqual(result, 0)
-        workflow.assert_called_once_with(recency_hours=72)
+        workflow.assert_called_once_with(recency_hours=24)
 
 
 if __name__ == '__main__':

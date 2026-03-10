@@ -32,6 +32,7 @@ MAX_TOPICS = 3
 MIN_CONTENT_WORDS = 700
 MAX_CONTENT_WORDS = 1200
 DEFAULT_RECENCY_HOURS = 24
+SECONDARY_RECENCY_FALLBACK_HOURS = 72
 MAX_RECENCY_FALLBACK_HOURS = 168
 LEARNING_CATEGORY_NAME = 'Learning'
 LEARNING_CATEGORY_SLUG = 'learning'
@@ -371,7 +372,11 @@ def parse_feed_items(source, xml_text, recency_hours):
 
 def fetch_recent_news(run_id, recency_hours):
     candidate_windows = []
-    for window in (recency_hours, max(recency_hours, DEFAULT_RECENCY_HOURS), max(recency_hours, MAX_RECENCY_FALLBACK_HOURS)):
+    for window in (
+        recency_hours,
+        max(recency_hours, SECONDARY_RECENCY_FALLBACK_HOURS),
+        max(recency_hours, MAX_RECENCY_FALLBACK_HOURS),
+    ):
         if window not in candidate_windows:
             candidate_windows.append(window)
 
